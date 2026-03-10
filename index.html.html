@@ -1462,20 +1462,24 @@ function showPage(p) {
 // FIX: Always filter by partner.id — never show other partners' deliveries
 async function loadDeliveries() {
   if (!partner) {
-    // Should never reach here due to setup guard, but extra safety
     document.getElementById('dash-assigned-list').innerHTML =
       '<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">No partner account linked.</div></div>';
     return;
   }
+  // Show spinner while loading
+  document.getElementById('dash-assigned-list').innerHTML =
+    '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
   try {
-    // CRITICAL: Always filter by logistics_partner_id — no fallback to unfiltered query
-    const q = `deliveries?logistics_partner_id=eq.${partner.id}&select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc`;
+    // Filter strictly by partner.id — created_at fallback for ordering
+    const q = `deliveries?logistics_partner_id=eq.${partner.id}&select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=created_at.desc`;
     allDeliveries = await api(q) || [];
     updateStats();
     renderDashboard();
     renderDeliveries();
   } catch(e) {
-    console.error(e);
+    console.error('loadDeliveries error:', e);
+    document.getElementById('dash-assigned-list').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load. Tap to retry.</div></div>';
     showToast('Failed to load deliveries', 'error');
   }
 }
@@ -1727,27 +1731,43 @@ function showToast(msg, type='success') {
 
 // ── NOTIFICATIONS ──
 function updateNotifUI() {
+  if (!('Notification' in window)) {
+    // Browser doesn't support notifications (iOS Safari, etc.)
+    const el = document.getElementById('p-notif-status');
+    if (el) { el.textContent = 'Not supported'; el.style.color = 'var(--text3)'; }
+    const btn = document.getElementById('p-notif-btn');
+    if (btn) { btn.textContent = 'Notifications not supported'; btn.style.opacity = '0.4'; }
+    const dot = document.getElementById('notif-dot');
+    if (dot) dot.style.display = 'none';
+    return;
+  }
   const granted = Notification.permission === 'granted';
   const el = document.getElementById('p-notif-status');
-  el.textContent = granted ? '✅ Enabled' : '❌ Off';
-  el.style.color = granted ? 'var(--green)' : 'var(--text3)';
+  if (el) { el.textContent = granted ? '✅ Enabled' : '❌ Off'; el.style.color = granted ? 'var(--green)' : 'var(--text3)'; }
   const btn = document.getElementById('p-notif-btn');
-  btn.textContent = granted ? 'Notifications Enabled ✓' : 'Enable Push Notifications';
-  btn.style.opacity = granted ? '0.6' : '1';
-  document.getElementById('notif-dot').style.display = granted ? 'none' : 'block';
+  if (btn) { btn.textContent = granted ? 'Notifications Enabled ✓' : 'Enable Push Notifications'; btn.style.opacity = granted ? '0.6' : '1'; }
+  const dot = document.getElementById('notif-dot');
+  if (dot) dot.style.display = granted ? 'none' : 'block';
 }
 
 async function enableNotifications() {
   document.getElementById('notif-banner').style.display = 'none';
-  if (!('Notification' in window)) { showToast('Notifications not supported','error'); return; }
-  const perm = await Notification.requestPermission();
-  localStorage.setItem('lw_logi_notif_asked','1');
-  if (perm === 'granted') {
-    localStorage.setItem('lw_logi_notif','1');
-    showToast('🔔 Notifications enabled!','success');
-    new Notification('🚚 Living Well Logistics',{ body:"You'll be pinged for new deliveries." });
-  } else {
-    showToast('Notifications blocked — enable in browser settings.','info');
+  if (!('Notification' in window)) {
+    showToast('Push notifications not supported on this browser','info');
+    return;
+  }
+  try {
+    const perm = await Notification.requestPermission();
+    localStorage.setItem('lw_logi_notif_asked','1');
+    if (perm === 'granted') {
+      localStorage.setItem('lw_logi_notif','1');
+      showToast('🔔 Notifications enabled!','success');
+      try { new Notification('🚚 Living Well Logistics',{ body:"You'll be pinged for new deliveries." }); } catch(e){}
+    } else {
+      showToast('Notifications blocked — enable in browser settings.','info');
+    }
+  } catch(e) {
+    showToast('Could not enable notifications','info');
   }
   updateNotifUI();
 }
@@ -1758,6 +1778,10 @@ async function requestNotifFromProfile() {
 }
 
 function toggleNotifRequest() {
+  if (!('Notification' in window)) {
+    showToast('Push notifications not supported on this browser','info');
+    return;
+  }
   if (Notification.permission !== 'granted') {
     document.getElementById('notif-banner').style.display = 'flex';
   } else {
@@ -1771,16 +1795,21 @@ function dismissNotifBanner() {
 }
 
 function showNotifBannerIfNeeded() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'granted') { updateNotifUI(); return; }
-  if (Notification.permission === 'denied') return;
-  if (localStorage.getItem('lw_logi_notif_asked')) return;
-  setTimeout(() => { document.getElementById('notif-banner').style.display = 'flex'; }, 2000);
+  if (!('Notification' in window)) { updateNotifUI(); return; }
+  try {
+    if (Notification.permission === 'granted') { updateNotifUI(); return; }
+    if (Notification.permission === 'denied') { updateNotifUI(); return; }
+    if (localStorage.getItem('lw_logi_notif_asked')) return;
+    setTimeout(() => {
+      const banner = document.getElementById('notif-banner');
+      if (banner) banner.style.display = 'flex';
+    }, 2000);
+  } catch(e) { /* silent — notifications not available */ }
 }
 
 function triggerNotification(title, body) {
-  if (Notification.permission === 'granted') {
-    new Notification(title, { body, icon:'/icon.png' });
+  if (('Notification' in window) && Notification.permission === 'granted') {
+    try { new Notification(title, { body, icon:'/icon.png' }); } catch(e){}
   }
   showToast(`${title}: ${body}`, 'info');
   try {
