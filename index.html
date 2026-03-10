@@ -1299,6 +1299,29 @@ body::before {
   </div>
 </div>
 
+<!-- Payment Received Modal -->
+<div class="modal-overlay" id="modal-pay-received">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💰 Payment Received</div>
+    <div class="modal-sub" id="pay-recv-sub">Confirm cash collected</div>
+    <input type="hidden" id="pay-recv-del-id">
+    <input type="hidden" id="pay-recv-order-id">
+    <div style="padding:0 4px 16px;">
+      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Amount to collect</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#10b981;" id="pay-recv-amount">₦0</div>
+      </div>
+      <label style="font-size:0.78rem;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">Confirm amount received (₦)</label>
+      <input type="number" id="pay-recv-confirm-amount" class="form-input" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1rem;font-family:inherit;" placeholder="Enter amount...">
+    </div>
+    <button class="modal-opt green" style="width:100%;justify-content:center;" onclick="submitPaymentReceived()">
+      <div>✅ Confirm — Cash Received</div>
+    </button>
+    <button class="modal-cancel" onclick="closePayRecvModal()">Cancel</button>
+  </div>
+</div>
+
 <!-- NOTIF BANNER -->
 <div id="notif-banner">
   <div style="font-size:1.4rem;flex-shrink:0;">🔔</div>
@@ -1495,7 +1518,12 @@ function updateStats() {
   const pending = allDeliveries.filter(d => d.status === 'assigned').length;
   const delivered = allDeliveries.filter(d => ['delivered_payment_made','delivered_awaiting_payment'].includes(d.status)).length;
   const total = allDeliveries.length;
-  const toRemit = allDeliveries.filter(d => d.customer_paid && !d.remitted_to_admin).reduce((s,d) => s + (parseFloat(d.amount_collected)||0), 0);
+  // Cash to remit = all awaiting payment orders (money collected but not yet given to admin)
+  // + delivered & paid cash orders not yet remitted
+  const toRemit = allDeliveries
+    .filter(d => d.status === 'delivered_awaiting_payment' || 
+                (d.status === 'delivered_payment_made' && d.customer_paid && !d.remitted_to_admin))
+    .reduce((s,d) => s + (parseFloat(d.orders?.total_price || d.amount_collected || 0)), 0);
   const paid = allDeliveries.filter(d => d.status === 'delivered_payment_made').length;
   const wait = allDeliveries.filter(d => d.status === 'delivered_awaiting_payment').length;
   const cancelled = allDeliveries.filter(d => d.status === 'cancelled').length;
@@ -1610,6 +1638,10 @@ function renderDeliveries() {
         <div class="dc-meta-item"><div class="dc-meta-lbl">Amount</div><div class="dc-meta-val mono">₦${parseFloat(o.total_price||0).toLocaleString()}</div></div>
       </div>
       ${isPending ? `<button class="update-btn" onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">Update Status →</button>` : ''}
+      ${d.status === 'delivered_awaiting_payment' ? `
+        <button class="update-btn" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:8px;" onclick="markPaymentReceived('${d.id}','${d.orders?.id||''}','${(o.customer_name||'').replace(/'/g,"\'")}',${parseFloat(o.total_price||0)})">
+          💰 Mark Payment Received
+        </button>` : ''}
       ${phone && isPending ? `<div style="display:flex;gap:8px;margin-top:8px;">
         <a href="tel:+${phone}" class="contact-btn call" style="flex:1;text-decoration:none;">📞 Call</a>
         <a href="https://wa.me/${phone}" target="_blank" class="contact-btn wa" style="flex:1;text-decoration:none;">💬 WhatsApp</a>
@@ -1630,7 +1662,53 @@ function openUpdateModal(d) {
 }
 
 function closeModal() { document.getElementById('modal-update').classList.remove('open'); }
-document.addEventListener('click', e => { if (e.target.id === 'modal-update') closeModal(); });
+document.addEventListener('click', e => {
+  if (e.target.id === 'modal-update') closeModal();
+  if (e.target.id === 'modal-pay-received') closePayRecvModal();
+});
+
+function closePayRecvModal() { document.getElementById('modal-pay-received').classList.remove('open'); }
+
+function markPaymentReceived(deliveryId, orderId, customerName, amount) {
+  document.getElementById('pay-recv-del-id').value = deliveryId;
+  document.getElementById('pay-recv-order-id').value = orderId;
+  document.getElementById('pay-recv-sub').textContent = `Collecting from ${customerName}`;
+  document.getElementById('pay-recv-amount').textContent = '₦' + amount.toLocaleString();
+  document.getElementById('pay-recv-confirm-amount').value = amount;
+  document.getElementById('modal-pay-received').classList.add('open');
+}
+
+async function submitPaymentReceived() {
+  const deliveryId = document.getElementById('pay-recv-del-id').value;
+  const orderId    = document.getElementById('pay-recv-order-id').value;
+  const amount     = parseFloat(document.getElementById('pay-recv-confirm-amount').value);
+  if (!amount || amount <= 0) { showToast('Enter the amount received', 'error'); return; }
+  try {
+    // Update order status to paid
+    if (orderId) {
+      await api(`orders?id=eq.${orderId}`, 'PATCH', { status: 'delivered_payment_made' }, { Prefer: 'return=minimal' });
+    }
+    // Update delivery status
+    await api(`deliveries?id=eq.${deliveryId}`, 'PATCH', {
+      status: 'delivered_payment_made',
+      customer_paid: true,
+      amount_collected: amount,
+      updated_at: new Date().toISOString()
+    }, { Prefer: 'return=minimal' });
+    // Log payment
+    try {
+      await api('payments', 'POST', {
+        order_id: orderId,
+        amount_received: amount,
+        confirmed_at: new Date().toISOString(),
+        notes: `Cash collected by ${profile?.full_name || 'logistics'}`
+      }, { Prefer: 'return=minimal' });
+    } catch(e) {}
+    closePayRecvModal();
+    showToast('✅ Payment confirmed! Cash recorded.', 'success');
+    await loadDeliveries();
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
 
 async function confirmUpdate(action) {
   closeModal();
