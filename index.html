@@ -1365,16 +1365,26 @@ async function doLogin() {
   }
 }
 
-async function setupProfile(uid, token) {
+// showErrors=true only during manual login — silent on auto session restore
+async function setupProfile(uid, token, showErrors = true) {
   const err = document.getElementById('lerr');
   const btn = document.getElementById('login-btn');
+
+  function fail(msg) {
+    if (showErrors) {
+      err.textContent = msg;
+      err.style.display = 'block';
+      btn.textContent = 'Sign In →';
+      btn.disabled = false;
+    }
+  }
+
   try {
     const ah = { ...H, 'Authorization': `Bearer ${token}` };
 
     const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${uid}&select=*`, { headers: ah });
     const pdata = await pr.json();
 
-    // ── FIX: Fetch partner strictly by user_id ──
     const lp = await fetch(`${SB}/rest/v1/logistics_partners?user_id=eq.${uid}&select=*`, {
       headers: { ...H, 'Authorization': `Bearer ${token}`, 'apikey': KEY }
     });
@@ -1384,33 +1394,30 @@ async function setupProfile(uid, token) {
     if (pdata && pdata.length) {
       profile = pdata[0];
       if (profile.role !== 'logistics') {
-        err.textContent = 'This portal is for logistics partners only.';
-        err.style.display = 'block'; btn.textContent = 'Sign In →'; btn.disabled = false; return;
+        fail('This portal is for logistics partners only.'); return;
       }
     } else if (partner) {
       profile = { id: uid, full_name: partner.name, phone: partner.phone, email: partner.email||'', role:'logistics' };
     } else {
-      err.textContent = 'Account not found. Contact admin.';
-      err.style.display = 'block'; btn.textContent = 'Sign In →'; btn.disabled = false; return;
+      fail('Account not found. Contact admin.'); return;
     }
 
-    // ── FIX: Hard block — cannot proceed without a linked partner ──
     if (!partner) {
-      err.textContent = 'No logistics partner account linked. Contact admin.';
-      err.style.display = 'block'; btn.textContent = 'Sign In →'; btn.disabled = false; return;
+      fail('No logistics partner account linked. Contact admin.'); return;
     }
 
     initApp();
   } catch(e) {
-    err.textContent = 'Setup error: ' + e.message; err.style.display = 'block';
-    btn.textContent = 'Sign In →'; btn.disabled = false;
+    fail('Setup error: ' + e.message);
+    if (showErrors) { btn.textContent = 'Sign In →'; btn.disabled = false; }
   }
 }
 
 async function checkSession() {
   const t = localStorage.getItem('lw_logi_tok'), u = localStorage.getItem('lw_logi_u');
   if (!t || !u) return;
-  try { user = JSON.parse(u); await setupProfile(user.id, t); } catch(e) {}
+  // showErrors=false — silent restore, no error shown on login screen
+  try { user = JSON.parse(u); await setupProfile(user.id, t, false); } catch(e) {}
 }
 
 function doLogout() {
