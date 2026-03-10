@@ -395,14 +395,31 @@ async function doLogin() {
 async function setupProfile(uid, token) {
   const err = document.getElementById('lerr');
   try {
-    const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${uid}&select=*`, { headers: { ...H, 'Authorization': `Bearer ${token}` } });
+    const authHeaders = { ...H, 'Authorization': `Bearer ${token}` };
+
+    // 1. Try profiles table first (created by admin when making account)
+    const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${uid}&select=*`, { headers: authHeaders });
     const pdata = await pr.json();
-    if (!pdata.length) { err.textContent = 'Account not found. Contact admin.'; err.style.display = 'block'; return; }
-    profile = pdata[0];
-    // Match logistics partner by phone
-    const lp = await fetch(`${SB}/rest/v1/logistics_partners?is_active=eq.true&select=*`, { headers: { ...H, 'Authorization': `Bearer ${token}` } });
+
+    // 2. Get logistics partner — match by user_id (most reliable) or phone as fallback
+    const lp = await fetch(`${SB}/rest/v1/logistics_partners?is_active=eq.true&select=*`, { headers: authHeaders });
     const lpdata = await lp.json();
-    partner = lpdata.find(p => p.phone === profile.phone) || null;
+    partner = lpdata.find(p => p.user_id === uid) || null;
+
+    if (pdata.length) {
+      profile = pdata[0];
+    } else if (partner) {
+      // No profile row yet — build one from the logistics_partners record
+      profile = { id: uid, full_name: partner.name, phone: partner.phone, email: partner.email || '', role: 'logistics' };
+    } else {
+      err.textContent = 'Account not found. Contact admin.'; err.style.display = 'block'; return;
+    }
+
+    // Refine partner match using phone if user_id match failed
+    if (!partner && profile.phone) {
+      partner = lpdata.find(p => p.phone === profile.phone) || null;
+    }
+
     initApp();
   } catch(e) { err.textContent = 'Setup error. Try again.'; err.style.display = 'block'; }
 }
