@@ -1670,11 +1670,27 @@ async function executeUpdate(id, orderId, productId, qty, action) {
 
 async function deductStock(productId, qty) {
   try {
+    // 1. Deduct from admin's main stock table
     const stocks = await api(`stock?product_id=eq.${productId}&select=*`);
-    if (!stocks?.length) return;
-    const newQty = Math.max(0, (parseInt(stocks[0].quantity)||0) - qty);
-    await api(`stock?product_id=eq.${productId}`,'PATCH',{ quantity:newQty, updated_at:new Date().toISOString() },{ Prefer:'return=minimal' });
-  } catch(e) {}
+    if (stocks?.length) {
+      const newQty = Math.max(0, (parseInt(stocks[0].quantity)||0) - qty);
+      await api(`stock?product_id=eq.${productId}`,'PATCH',{ quantity:newQty, updated_at:new Date().toISOString() },{ Prefer:'return=minimal' });
+    }
+    // 2. Deduct from THIS partner's logistics_stock quantity_remaining
+    // Find the most recent confirmed stock record for this product & partner
+    const raw = await api(`logistics_stock?select=*`) || [];
+    const lsRows = raw.filter(r => r.product_id === productId && r.logistics_partner_id === partner.id && r.confirmed && (r.quantity_remaining||0) > 0);
+    // Sort by sent_at ascending — deduct from oldest batch first
+    lsRows.sort((a,b) => new Date(a.sent_at) - new Date(b.sent_at));
+    let remaining = qty;
+    for (const row of lsRows) {
+      if (remaining <= 0) break;
+      const deduct = Math.min(remaining, row.quantity_remaining||0);
+      const newRemaining = (row.quantity_remaining||0) - deduct;
+      await api(`logistics_stock?id=eq.${row.id}`, 'PATCH', { quantity_remaining: newRemaining }, { Prefer:'return=minimal' });
+      remaining -= deduct;
+    }
+  } catch(e) { console.warn('deductStock error:', e.message); }
 }
 
 // ── STOCK ──
@@ -1703,7 +1719,10 @@ async function loadStockInbox() {
         <div class="stock-grid">
           <div class="stock-stat"><div class="stock-stat-lbl">Qty Sent</div><div class="stock-stat-val">${s.quantity_sent}</div></div>
           <div class="stock-stat"><div class="stock-stat-lbl">Unit Price</div><div class="stock-stat-val" style="color:var(--text);">₦${parseFloat(s.products?.price||0).toLocaleString()}</div></div>
+          ${confirmed ? `<div class="stock-stat"><div class="stock-stat-lbl">Confirmed</div><div class="stock-stat-val" style="color:var(--green);">${s.quantity_confirmed}</div></div>` : ''}
+          ${confirmed ? `<div class="stock-stat"><div class="stock-stat-lbl">Remaining</div><div class="stock-stat-val" style="color:${(s.quantity_remaining||0)<=5?'var(--red)':'var(--amber)'};font-weight:800;">${s.quantity_remaining||0}</div></div>` : ''}
         </div>
+        ${(s.quantity_remaining||0) > 0 && confirmed ? `<div style="margin:8px 0 10px;height:6px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;"><div style="height:100%;border-radius:6px;background:${(s.quantity_remaining/s.quantity_confirmed)>0.3?'var(--green)':'var(--red)'};width:${Math.round((s.quantity_remaining/s.quantity_confirmed)*100)}%;transition:width 0.4s;"></div></div>` : ''}
         ${!confirmed ? `<button class="confirm-btn" onclick="confirmStockReceipt('${s.id}', ${s.quantity_sent})">✓ Confirm Receipt of ${s.quantity_sent} units</button>` : ''}
       </div>`;
     }).join('');
