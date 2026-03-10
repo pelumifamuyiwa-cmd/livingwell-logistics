@@ -8,231 +8,302 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0C0C0F; --bg2:#111116; --bg3:#16161d; --bg4:#1c1c25;
-  --purple:#1D4ED8; --purple2:#3B82F6; --purple-dim:rgba(29,78,216,0.15);
-  --green:#10B981; --green-dim:rgba(16,185,129,0.15);
-  --amber:#F59E0B; --amber-dim:rgba(245,158,11,0.15);
-  --red:#EF4444; --red-dim:rgba(239,68,68,0.15);
-  --blue:#3B82F6; --blue-dim:rgba(59,130,246,0.15);
-  --text:#F0EEF8; --text2:#A09BB8; --text3:#5C5878;
-  --border:rgba(255,255,255,0.07); --card-border:rgba(255,255,255,0.06);
-  --shadow:0 4px 24px rgba(0,0,0,0.4); --shadow-lg:0 8px 40px rgba(0,0,0,0.5);
-  --r:16px; --r-sm:10px; --white:#fff;
+  --bg:#0A0E1A; --bg2:#0d1220; --bg3:#111827; --bg4:#1a2235;
+  --blue:#2563EB; --blue2:#60A5FA; --blue-dim:rgba(37,99,235,0.15); --blue-glow:rgba(96,165,250,0.2);
+  --green:#10B981; --green-dim:rgba(16,185,129,0.12);
+  --amber:#F59E0B; --amber-dim:rgba(245,158,11,0.12);
+  --red:#EF4444; --red-dim:rgba(239,68,68,0.12);
+  --text:#EEF2FF; --text2:#94A3B8; --text3:#475569;
+  --border:rgba(96,165,250,0.1); --card-border:rgba(96,165,250,0.08);
+  --shadow:0 4px 24px rgba(0,0,0,0.5); --shadow-lg:0 8px 40px rgba(0,0,0,0.6);
+  --r:18px; --r-sm:10px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;}
 
-/* LOGIN */
-#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;position:relative;overflow:hidden;}
-#login-screen::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:500px;height:500px;background:radial-gradient(circle,rgba(29,78,216,0.08) 0%,transparent 60%);pointer-events:none;}
-.login-logo{text-align:center;margin-bottom:36px;z-index:1;}
-.login-logo-icon{width:76px;height:76px;border-radius:26px;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 28px rgba(29,78,216,0.35);}
-.login-logo h1{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;color:var(--text);line-height:1;margin-bottom:5px;}
-.login-logo h1 em{color:var(--purple);font-style:normal;}
-.login-logo p{font-size:0.78rem;color:var(--text3);font-weight:500;}
-.login-box{width:100%;max-width:400px;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);padding:30px 26px;box-shadow:var(--shadow-lg);z-index:1;}
-.login-box h2{font-size:1.05rem;font-weight:700;margin-bottom:4px;}
-.login-box .sub{font-size:0.78rem;color:var(--text3);margin-bottom:26px;}
-.login-error{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:10px 14px;font-size:0.83rem;margin-bottom:14px;display:none;}
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 
-/* FORMS */
-.form-group{margin-bottom:16px;}
-.form-label{display:block;font-size:0.78rem;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
-.form-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:12px;padding:13px 16px;font-size:0.95rem;font-family:'Outfit',sans-serif;color:var(--text);outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
-.form-input:focus{border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-dim);}
+/* ── LOGIN ── */
+#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;position:relative;overflow:hidden;}
+#login-screen::before{content:'';position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(37,99,235,0.12) 0%,transparent 65%);pointer-events:none;}
+#login-screen::after{content:'';position:absolute;bottom:-100px;right:-100px;width:300px;height:300px;background:radial-gradient(circle,rgba(96,165,250,0.06) 0%,transparent 70%);pointer-events:none;}
+.login-logo{text-align:center;margin-bottom:32px;z-index:1;}
+.login-icon{width:80px;height:80px;border-radius:28px;background:linear-gradient(135deg,#1e3a8a,#2563EB);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 8px 32px rgba(37,99,235,0.4),0 0 0 1px rgba(96,165,250,0.2);}
+.login-logo h1{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
+.login-logo h1 em{color:var(--blue2);font-style:normal;}
+.login-logo p{font-size:0.78rem;color:var(--text3);font-weight:500;letter-spacing:0.5px;text-transform:uppercase;}
+.login-card{width:100%;max-width:390px;background:rgba(17,24,39,0.9);border:1px solid rgba(96,165,250,0.12);border-radius:24px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.5);backdrop-filter:blur(20px);z-index:1;}
+.login-card h2{font-size:1.1rem;font-weight:700;margin-bottom:4px;}
+.login-card .sub{font-size:0.8rem;color:var(--text3);margin-bottom:28px;}
+.form-group{margin-bottom:18px;}
+.form-label{display:block;font-size:0.72rem;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.6px;}
+.form-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(96,165,250,0.1);border-radius:12px;padding:13px 16px;font-size:0.95rem;font-family:'Outfit',sans-serif;color:var(--text);outline:none;transition:all 0.2s;}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim);}
 .form-input::placeholder{color:var(--text3);}
-select.form-input option{background:var(--bg3);color:var(--text);}
+select.form-input option{background:var(--bg3);}
+.login-error{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:10px 14px;font-size:0.83rem;margin-bottom:14px;display:none;}
+.btn-login{width:100%;background:linear-gradient(135deg,#1e40af,#2563EB,#3B82F6);color:#fff;border:none;border-radius:14px;padding:15px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s;letter-spacing:0.3px;box-shadow:0 4px 16px rgba(37,99,235,0.3);}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(37,99,235,0.4);}
 
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:10px;font-size:0.86rem;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:'Outfit',sans-serif;}
-.btn-primary{width:100%;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border:none;border-radius:12px;padding:14px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s;}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(29,78,216,0.35);}
-.btn-purple{background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;}
-.btn-purple:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(29,78,216,0.3);}
-.btn-ghost{background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid var(--border);}
-.btn-ghost:hover{background:rgba(255,255,255,0.1);color:var(--text);}
-.btn-sm{padding:7px 12px;font-size:0.78rem;border-radius:8px;}
-
-/* APP */
+/* ── APP ── */
 #app{display:none;}
-.app-header{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(12,12,15,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100;}
-.header-brand{display:flex;align-items:center;gap:10px;}
-.header-brand-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;}
-.header-brand-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;}
-.header-brand-name em{color:var(--purple);font-style:normal;}
-.header-badge{background:var(--purple-dim);color:var(--purple2);border:1px solid rgba(29,78,216,0.2);border-radius:6px;padding:3px 8px;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
-.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;cursor:pointer;}
 
-/* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(17,17,22,0.98);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;cursor:pointer;transition:all 0.2s;color:var(--text3);font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;border:none;background:none;font-family:'Outfit',sans-serif;}
-.nav-item svg{width:20px;height:20px;transition:all 0.2s;}
-.nav-item.active{color:var(--purple2);}
-.nav-item.active svg{filter:drop-shadow(0 0 6px rgba(29,78,216,0.5));}
+/* ── HEADER ── */
+.app-header{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(10,14,26,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:100;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#1e40af,#2563EB);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,99,235,0.3);}
+.brand-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;}
+.brand-name em{color:var(--blue2);font-style:normal;}
+.brand-pill{background:rgba(37,99,235,0.15);color:var(--blue2);border:1px solid rgba(96,165,250,0.2);border-radius:20px;padding:3px 10px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.notif-btn{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all 0.2s;}
+.notif-btn:hover{background:var(--blue-dim);border-color:rgba(96,165,250,0.2);}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg);display:none;}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1e40af,var(--blue2));display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;cursor:pointer;border:2px solid rgba(96,165,250,0.2);}
 
-/* PAGES */
-.main-content{padding:76px 16px 90px;max-width:600px;margin:0 auto;}
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,14,26,0.97);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;cursor:pointer;transition:all 0.2s;color:var(--text3);font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:none;background:none;font-family:'Outfit',sans-serif;position:relative;}
+.nav-btn svg{width:22px;height:22px;transition:all 0.2s;}
+.nav-btn.active{color:var(--blue2);}
+.nav-btn.active svg{filter:drop-shadow(0 0 8px rgba(96,165,250,0.6));}
+.nav-badge{position:absolute;top:6px;right:calc(50% - 16px);background:var(--red);color:#fff;font-size:0.55rem;font-weight:800;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;display:none;}
+
+/* ── MAIN ── */
+.main{padding:70px 16px 80px;max-width:600px;margin:0 auto;}
 .page{display:none;}
 .page.active{display:block;}
-.page-title{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:800;margin-bottom:4px;}
-.page-sub{font-size:0.82rem;color:var(--text3);margin-bottom:20px;}
 
-/* CARDS */
-.card{background:var(--bg3);border:1px solid var(--card-border);border-radius:var(--r);padding:20px;margin-bottom:14px;}
-.card-title{font-size:0.9rem;font-weight:700;margin-bottom:4px;}
-.card-sub{font-size:0.78rem;color:var(--text3);}
+/* ── SECTION HEADER ── */
+.sec-header{margin-bottom:20px;}
+.sec-title{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:800;margin-bottom:3px;}
+.sec-sub{font-size:0.8rem;color:var(--text3);}
 
-/* STATS */
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
-.stat-card{background:var(--bg3);border:1px solid var(--card-border);border-radius:var(--r);padding:16px;}
-.stat-label{font-size:0.72rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
-.stat-value{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:700;line-height:1;}
-.stat-value.purple{color:var(--purple2);}
-.stat-value.green{color:var(--green);}
-.stat-value.amber{color:var(--amber);}
-.stat-value.red{color:var(--red);}
+/* ── ASSIGNED CARDS (main CTA) ── */
+.assigned-card{background:linear-gradient(135deg,rgba(30,58,138,0.3),rgba(17,24,39,0.8));border:1px solid rgba(96,165,250,0.2);border-radius:var(--r);padding:18px;margin-bottom:14px;position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.15s;}
+.assigned-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--blue2),transparent);}
+.assigned-card:hover{border-color:rgba(96,165,250,0.35);transform:translateY(-1px);}
+.ac-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.ac-name{font-weight:800;font-size:1rem;margin-bottom:3px;}
+.ac-product{font-size:0.8rem;color:var(--blue2);font-weight:600;}
+.ac-status-dot{width:10px;height:10px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px rgba(245,158,11,0.5);margin-top:4px;}
+.ac-info-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.ac-info-chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:6px 10px;font-size:0.78rem;color:var(--text2);}
+.ac-info-chip svg{width:12px;height:12px;color:var(--blue2);flex-shrink:0;}
+.ac-amount{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);font-size:0.85rem;}
+/* Quick action buttons — the key UX improvement */
+.ac-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.ac-action-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;transition:all 0.2s;}
+.ac-action-btn.delivered-paid{background:var(--green-dim);color:var(--green);border:1px solid rgba(16,185,129,0.2);}
+.ac-action-btn.delivered-paid:hover{background:var(--green);color:#fff;}
+.ac-action-btn.delivered-wait{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,0.2);}
+.ac-action-btn.delivered-wait:hover{background:var(--amber);color:#fff;}
+.ac-action-btn.cancelled{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.2);}
+.ac-action-btn.cancelled:hover{background:var(--red);color:#fff;}
+.ac-action-btn svg{width:18px;height:18px;}
+.ac-contact{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.contact-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:10px;font-size:0.78rem;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;border:none;text-decoration:none;transition:all 0.2s;}
+.contact-btn.call{background:rgba(37,99,235,0.12);color:var(--blue2);border:1px solid rgba(96,165,250,0.15);}
+.contact-btn.call:hover{background:var(--blue-dim);}
+.contact-btn.whatsapp{background:rgba(37,211,102,0.1);color:#25D366;border:1px solid rgba(37,211,102,0.15);}
+.contact-btn.whatsapp:hover{background:rgba(37,211,102,0.2);}
 
-/* BADGES */
-.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
-.badge-pending{background:var(--amber-dim);color:var(--amber);}
-.badge-transit{background:var(--blue-dim);color:var(--blue);}
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.stat-box{background:var(--bg3);border:1px solid var(--card-border);border-radius:14px;padding:14px 12px;text-align:center;}
+.stat-box-val{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;line-height:1;margin-bottom:4px;}
+.stat-box-val.blue{color:var(--blue2);}
+.stat-box-val.green{color:var(--green);}
+.stat-box-val.amber{color:var(--amber);}
+.stat-box-label{font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+
+/* ── GENERAL DELIVERY CARD ── */
+.delivery-card{background:var(--bg3);border:1px solid var(--card-border);border-radius:var(--r);padding:16px;margin-bottom:10px;transition:border-color 0.2s;}
+.delivery-card:hover{border-color:rgba(96,165,250,0.2);}
+.dc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.dc-name{font-weight:700;font-size:0.92rem;}
+.dc-product{font-size:0.76rem;color:var(--text3);margin-top:2px;}
+.dc-badges{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
+.badge-assigned{background:var(--amber-dim);color:var(--amber);}
+.badge-transit{background:var(--blue-dim);color:var(--blue2);}
 .badge-delivered{background:var(--green-dim);color:var(--green);}
-.badge-failed{background:var(--red-dim);color:var(--red);}
-.badge-paid{background:var(--green-dim);color:var(--green);}
-.badge-unpaid{background:var(--red-dim);color:var(--red);}
-.badge-remitted{background:var(--purple-dim);color:var(--purple2);}
+.badge-awaiting{background:var(--amber-dim);color:var(--amber);}
+.badge-cancelled{background:var(--red-dim);color:var(--red);}
 
-/* DELIVERY CARDS */
-.delivery-card{background:var(--bg3);border:1px solid var(--card-border);border-radius:var(--r);padding:18px;margin-bottom:12px;transition:border-color 0.2s;}
-.delivery-card:hover{border-color:rgba(29,78,216,0.25);}
-.delivery-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
-.delivery-customer{font-weight:700;font-size:0.95rem;}
-.delivery-product{font-size:0.8rem;color:var(--text3);margin-top:2px;}
-.delivery-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
-.delivery-meta-item{background:var(--bg4);border-radius:8px;padding:8px 10px;}
-.delivery-meta-label{font-size:0.68rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px;}
-.delivery-meta-value{font-size:0.82rem;font-weight:600;}
-.delivery-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
-
-/* FILTER */
-.filter-bar{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;}
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;}
 .filter-bar::-webkit-scrollbar{display:none;}
-.filter-chip{padding:7px 14px;border-radius:20px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text3);white-space:nowrap;transition:all 0.2s;font-family:'Outfit',sans-serif;}
-.filter-chip.active{background:var(--purple-dim);color:var(--purple2);border-color:rgba(29,78,216,0.3);}
+.filter-chip{padding:7px 14px;border-radius:20px;font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text3);white-space:nowrap;transition:all 0.2s;font-family:'Outfit',sans-serif;}
+.filter-chip.active{background:var(--blue-dim);color:var(--blue2);border-color:rgba(96,165,250,0.3);}
 
-/* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;backdrop-filter:blur(4px);}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--bg3);border:1px solid var(--card-border);border-radius:24px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalIn 0.25s ease;}
-@keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.modal-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;margin-bottom:4px;}
-.modal-sub{font-size:0.8rem;color:var(--text3);margin-bottom:20px;}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+/* ── META GRID ── */
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0;}
+.meta-item{background:var(--bg4);border-radius:9px;padding:8px 10px;}
+.meta-label{font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px;}
+.meta-val{font-size:0.82rem;font-weight:600;}
+.mono{font-family:'JetBrains Mono',monospace;}
 
-/* EMPTY */
-.empty{text-align:center;padding:48px 20px;color:var(--text3);}
-.empty-icon{font-size:2.5rem;margin-bottom:12px;}
-.empty-text{font-size:0.9rem;}
+/* ── PROFILE ── */
+.profile-card{background:var(--bg3);border:1px solid var(--card-border);border-radius:var(--r);padding:24px;margin-bottom:14px;}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#1e40af,var(--blue2));display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;margin-bottom:16px;border:3px solid rgba(96,165,250,0.2);box-shadow:0 0 20px rgba(37,99,235,0.2);}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.profile-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;}
+.profile-row-label{font-size:0.8rem;color:var(--text3);}
+.profile-row-val{font-size:0.85rem;font-weight:600;}
 
-/* TOAST */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:0.85rem;font-weight:600;z-index:3000;white-space:nowrap;box-shadow:var(--shadow-lg);transition:opacity 0.3s;pointer-events:none;}
-.toast.hide{opacity:0;}
+/* ── EMPTY ── */
+.empty{text-align:center;padding:48px 20px;}
+.empty-icon{font-size:2.8rem;margin-bottom:12px;filter:grayscale(0.3);}
+.empty-text{font-size:0.88rem;color:var(--text3);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(0);background:var(--bg4);border:1px solid var(--border);border-radius:14px;padding:12px 20px;font-size:0.84rem;font-weight:600;z-index:3000;white-space:nowrap;box-shadow:var(--shadow-lg);transition:opacity 0.3s,transform 0.3s;pointer-events:none;}
+.toast.hide{opacity:0;transform:translateX(-50%) translateY(8px);}
 .toast.success{border-color:rgba(16,185,129,0.3);color:var(--green);}
 .toast.error{border-color:rgba(239,68,68,0.3);color:var(--red);}
+.toast.info{border-color:rgba(96,165,250,0.3);color:var(--blue2);}
 
-.divider{height:1px;background:var(--border);margin:16px 0;}
-.amount{font-family:'JetBrains Mono',monospace;font-weight:600;}
+/* ── CONFIRM MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:flex-end;justify-content:center;z-index:1000;backdrop-filter:blur(6px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg3);border:1px solid rgba(96,165,250,0.15);border-radius:28px 28px 0 0;padding:28px 24px 32px;width:100%;max-width:540px;animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1);}
+@keyframes slideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 20px;}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;margin-bottom:4px;}
+.modal-sub{font-size:0.82rem;color:var(--text3);margin-bottom:20px;}
+.modal-actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px;}
+.modal-action-btn{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;font-size:0.9rem;font-weight:700;transition:all 0.2s;text-align:left;}
+.modal-action-btn .icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.modal-action-btn.green{background:var(--green-dim);color:var(--green);border:1px solid rgba(16,185,129,0.2);}
+.modal-action-btn.green:hover{background:var(--green);color:#fff;}
+.modal-action-btn.green:hover .icon{background:rgba(255,255,255,0.2);}
+.modal-action-btn.amber{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,0.2);}
+.modal-action-btn.amber:hover{background:var(--amber);color:#fff;}
+.modal-action-btn.red{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.2);}
+.modal-action-btn.red:hover{background:var(--red);color:#fff;}
+.modal-cancel{width:100%;padding:14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:14px;color:var(--text3);font-size:0.88rem;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;margin-top:8px;transition:all 0.2s;}
+.modal-cancel:hover{background:rgba(255,255,255,0.08);color:var(--text);}
 
-/* STATUS OPTIONS */
-.status-option{width:100%;display:flex;align-items:center;gap:14px;background:var(--bg4);border:2px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;text-align:left;font-family:'Outfit',sans-serif;color:var(--text);transition:all 0.2s;}
-.status-option:hover{border-color:var(--purple);background:var(--purple-dim);}
-.status-option.selected{border-color:var(--purple2);background:var(--purple-dim);}
+/* ── NOTIF BANNER ── */
+#notif-banner{display:none;position:fixed;top:68px;left:12px;right:12px;background:linear-gradient(135deg,#0f1f4a,#1a3472);border:1px solid rgba(96,165,250,0.3);border-radius:16px;padding:16px 18px;z-index:500;box-shadow:0 8px 32px rgba(0,0,0,0.5);align-items:center;gap:14px;max-width:540px;margin:0 auto;}
+.notif-banner-text{flex:1;}
+.notif-banner-text strong{font-size:0.88rem;color:#fff;display:block;margin-bottom:2px;}
+.notif-banner-text span{font-size:0.75rem;color:rgba(255,255,255,0.6);}
+.notif-banner-btns{display:flex;gap:8px;flex-shrink:0;}
+.notif-yes{background:linear-gradient(135deg,#1D4ED8,#3B82F6);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;}
+.notif-no{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);border:none;border-radius:9px;padding:8px 10px;font-size:0.78rem;cursor:pointer;font-family:'Outfit',sans-serif;}
+
+/* ── LOADING ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue2);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--text3);font-size:0.85rem;}
+
+/* ── SECTION DIVIDER ── */
+.section-label{font-size:0.7rem;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── SUMMARY STRIP (bottom of dash) ── */
+.summary-strip{background:var(--bg3);border:1px solid var(--card-border);border-radius:var(--r);padding:16px;margin-bottom:14px;}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;}
+.summary-row:not(:last-child){border-bottom:1px solid var(--border);}
+.summary-key{font-size:0.8rem;color:var(--text3);}
+.summary-val{font-size:0.88rem;font-weight:700;}
+.summary-val.green{color:var(--green);}
+.summary-val.amber{color:var(--amber);}
+.summary-val.blue{color:var(--blue2);}
+.summary-val.mono{font-family:'JetBrains Mono',monospace;}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ── LOGIN ── -->
 <div id="login-screen">
   <div class="login-logo">
-    <div class="login-logo-icon">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    <div class="login-icon">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
     </div>
     <h1>Living <em>Well</em></h1>
-    <p>Logistics Partner Portal</p>
+    <p>Logistics Portal</p>
   </div>
-  <div class="login-box">
-    <h2>Welcome back</h2>
-    <p class="sub">Sign in to your logistics account</p>
+  <div class="login-card">
+    <h2>Sign in</h2>
+    <p class="sub">Access your delivery dashboard</p>
     <div class="login-error" id="lerr"></div>
     <div class="form-group">
       <label class="form-label">Email</label>
-      <input type="email" class="form-input" id="le" placeholder="your@email.com" autocomplete="email">
+      <input type="email" class="form-input" id="le" placeholder="you@example.com" autocomplete="email">
     </div>
     <div class="form-group">
       <label class="form-label">Password</label>
       <input type="password" class="form-input" id="lp" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+    <button class="btn-login" onclick="doLogin()" id="login-btn">Sign In</button>
   </div>
 </div>
 
-<!-- APP -->
+<!-- ── APP ── -->
 <div id="app">
   <header class="app-header">
-    <div class="header-brand">
-      <div class="header-brand-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       </div>
-      <span class="header-brand-name">Living <em>Well</em></span>
-      <span class="header-badge">Logistics</span>
+      <span class="brand-name">Living <em>Well</em></span>
+      <span class="brand-pill">Logistics</span>
     </div>
-    <div class="avatar" id="topav" onclick="showPage('profile')">--</div>
+    <div class="header-right">
+      <div class="notif-btn" id="notif-btn" onclick="toggleNotifRequest()" title="Notifications">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <div class="notif-dot" id="notif-dot"></div>
+      </div>
+      <div class="avatar" id="topav" onclick="showPage('profile')">--</div>
+    </div>
   </header>
 
-  <div class="main-content">
-
+  <div class="main">
     <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
-      <div class="page-title" id="dash-greeting">Dashboard</div>
-      <div class="page-sub">Your delivery overview</div>
-
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-label">Assigned</div><div class="stat-value purple" id="st-assigned">0</div></div>
-        <div class="stat-card"><div class="stat-label">In Transit</div><div class="stat-value amber" id="st-transit">0</div></div>
-        <div class="stat-card"><div class="stat-label">Delivered</div><div class="stat-value green" id="st-delivered">0</div></div>
-        <div class="stat-card"><div class="stat-label">Cash to Remit</div><div class="stat-value red amount" id="st-remit">₦0</div></div>
+      <div class="sec-header">
+        <div class="sec-title" id="dash-greeting">Dashboard</div>
+        <div class="sec-sub" id="dash-date"></div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Payment Summary</div>
-        <div class="card-sub" style="margin-bottom:14px;">Collections vs remittances</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div style="background:var(--bg4);border-radius:10px;padding:14px;">
-            <div style="font-size:0.7rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Collected</div>
-            <div class="amount" style="font-size:1.2rem;font-weight:700;color:var(--green)" id="pay-collected">₦0</div>
-          </div>
-          <div style="background:var(--bg4);border-radius:10px;padding:14px;">
-            <div style="font-size:0.7rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Remitted</div>
-            <div class="amount" style="font-size:1.2rem;font-weight:700;color:var(--purple2)" id="pay-remitted">₦0</div>
-          </div>
-        </div>
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-box-val amber" id="st-assigned">0</div><div class="stat-box-label">To Deliver</div></div>
+        <div class="stat-box"><div class="stat-box-val green" id="st-delivered">0</div><div class="stat-box-label">Delivered</div></div>
+        <div class="stat-box"><div class="stat-box-val blue" id="st-total">0</div><div class="stat-box-label">Total</div></div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Pending Deliveries</div>
-        <div class="card-sub" style="margin-bottom:14px;">Awaiting pickup or delivery</div>
-        <div id="dash-pending-list"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No pending deliveries</div></div></div>
+      <!-- Assigned orders — ACTION ZONE -->
+      <div class="section-label">🚨 Needs Action</div>
+      <div id="dash-assigned-list"><div class="loading-state"><div class="spinner"></div>Loading...</div></div>
+
+      <!-- Summary strip -->
+      <div class="section-label">Today's Summary</div>
+      <div class="summary-strip">
+        <div class="summary-row"><span class="summary-key">Cash to remit to admin</span><span class="summary-val amber mono" id="sum-remit">₦0</span></div>
+        <div class="summary-row"><span class="summary-key">Delivered & paid</span><span class="summary-val green" id="sum-paid">0 orders</span></div>
+        <div class="summary-row"><span class="summary-key">Awaiting payment</span><span class="summary-val amber" id="sum-wait">0 orders</span></div>
+        <div class="summary-row"><span class="summary-key">Cancelled today</span><span class="summary-val" id="sum-cancel" style="color:var(--text3);">0 orders</span></div>
       </div>
     </div>
 
     <!-- DELIVERIES -->
     <div class="page" id="page-deliveries">
-      <div class="page-title">My Deliveries</div>
-      <div class="page-sub">Tap any delivery to update status & payment</div>
+      <div class="sec-header">
+        <div class="sec-title">All Deliveries</div>
+        <div class="sec-sub">Full history</div>
+      </div>
       <div class="filter-bar">
         <button class="filter-chip active" onclick="filterDeliveries('all',this)">All</button>
-        <button class="filter-chip" onclick="filterDeliveries('assigned',this)">Assigned</button>
-        <button class="filter-chip" onclick="filterDeliveries('in_transit',this)">In Transit</button>
+        <button class="filter-chip" onclick="filterDeliveries('assigned',this)">Pending</button>
         <button class="filter-chip" onclick="filterDeliveries('delivered_payment_made',this)">Paid</button>
         <button class="filter-chip" onclick="filterDeliveries('delivered_awaiting_payment',this)">Awaiting Pay</button>
         <button class="filter-chip" onclick="filterDeliveries('cancelled',this)">Cancelled</button>
@@ -242,113 +313,86 @@ select.form-input option{background:var(--bg3);color:var(--text);}
 
     <!-- PROFILE -->
     <div class="page" id="page-profile">
-      <div class="page-title">My Profile</div>
-      <div class="page-sub">Your account details</div>
-      <div class="card">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
-          <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;" id="p-av">--</div>
-          <div>
-            <div style="font-weight:700;font-size:1rem;" id="p-name">—</div>
-            <div style="font-size:0.8rem;color:var(--text3);" id="p-email">—</div>
-          </div>
-        </div>
+      <div class="sec-header">
+        <div class="sec-title">My Profile</div>
+        <div class="sec-sub">Account & notifications</div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-avatar" id="p-av">--</div>
+        <div style="font-weight:800;font-size:1.05rem;margin-bottom:3px;" id="p-name">—</div>
+        <div style="font-size:0.8rem;color:var(--text3);margin-bottom:16px;" id="p-email">—</div>
         <div class="divider"></div>
-        <div style="display:grid;gap:12px;margin-top:16px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:0.82rem;color:var(--text3);">Phone</span>
-            <span style="font-size:0.88rem;font-weight:600;" id="p-phone">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:0.82rem;color:var(--text3);">Coverage Area</span>
-            <span style="font-size:0.88rem;font-weight:600;" id="p-area">—</span>
-          </div>
-        </div>
+        <div class="profile-row"><span class="profile-row-label">Phone</span><span class="profile-row-val" id="p-phone">—</span></div>
+        <div class="profile-row"><span class="profile-row-label">Coverage Area</span><span class="profile-row-val" id="p-area">—</span></div>
+        <div class="profile-row"><span class="profile-row-label">Notifications</span><span class="profile-row-val" id="p-notif-status" style="color:var(--text3);">Off</span></div>
         <div class="divider"></div>
-        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:4px;" onclick="doLogout()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <button onclick="requestNotifFromProfile()" style="width:100%;background:var(--blue-dim);color:var(--blue2);border:1px solid rgba(96,165,250,0.2);border-radius:12px;padding:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;margin-bottom:10px;transition:all 0.2s;" id="p-notif-btn">Enable Push Notifications</button>
+        <button onclick="doLogout()" style="width:100%;background:rgba(255,255,255,0.04);color:var(--text3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s;">
           Sign Out
         </button>
       </div>
     </div>
-
   </div>
 
   <nav class="bottom-nav">
-    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Dashboard
+    <button class="nav-btn active" id="nav-dashboard" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+      <span class="nav-badge" id="nav-badge">0</span>
     </button>
-    <button class="nav-item" id="nav-deliveries" onclick="showPage('deliveries')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    <button class="nav-btn" id="nav-deliveries" onclick="showPage('deliveries')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       Deliveries
     </button>
-    <button class="nav-item" id="nav-profile" onclick="showPage('profile')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <button class="nav-btn" id="nav-profile" onclick="showPage('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Profile
     </button>
   </nav>
 </div>
 
-<!-- Update Modal -->
+<!-- ── UPDATE BOTTOM SHEET ── -->
 <div class="modal-overlay" id="modal-update">
   <div class="modal">
-    <div class="modal-title">Update Delivery</div>
-    <div class="modal-sub" id="modal-update-sub">What happened with this delivery?</div>
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Update Delivery</div>
+    <div class="modal-sub" id="modal-sub">What happened with this delivery?</div>
     <input type="hidden" id="modal-del-id">
     <input type="hidden" id="modal-del-order-id">
     <input type="hidden" id="modal-del-product-id">
     <input type="hidden" id="modal-del-qty">
-
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px;">
-      <button class="status-option" id="opt-delivered-paid" onclick="selectStatus('delivered_paid')">
-        <span style="font-size:1.4rem;">✅</span>
-        <div>
-          <div style="font-weight:700;font-size:0.92rem;">Delivered & Paid</div>
-          <div style="font-size:0.76rem;color:var(--text3);margin-top:2px;">Customer received order and paid</div>
-        </div>
+    <div class="modal-actions">
+      <button class="modal-action-btn green" onclick="confirmUpdate('delivered_paid')">
+        <div class="icon">✅</div>
+        <div><div>Delivered & Paid</div><div style="font-size:0.72rem;font-weight:400;opacity:0.8;margin-top:2px;">Customer received and paid</div></div>
       </button>
-      <button class="status-option" id="opt-delivered-pending" onclick="selectStatus('delivered_pending')">
-        <span style="font-size:1.4rem;">⏳</span>
-        <div>
-          <div style="font-weight:700;font-size:0.92rem;">Delivered, Awaiting Payment</div>
-          <div style="font-size:0.76rem;color:var(--text3);margin-top:2px;">Customer received but hasn't paid yet</div>
-        </div>
+      <button class="modal-action-btn amber" onclick="confirmUpdate('delivered_pending')">
+        <div class="icon">⏳</div>
+        <div><div>Delivered, Awaiting Payment</div><div style="font-size:0.72rem;font-weight:400;opacity:0.8;margin-top:2px;">Delivered but not yet paid</div></div>
       </button>
-      <button class="status-option" id="opt-cancelled" onclick="selectStatus('cancelled')">
-        <span style="font-size:1.4rem;">❌</span>
-        <div>
-          <div style="font-weight:700;font-size:0.92rem;">Cancelled</div>
-          <div style="font-size:0.76rem;color:var(--text3);margin-top:2px;">Could not complete delivery</div>
-        </div>
+      <button class="modal-action-btn red" onclick="confirmUpdate('cancelled')">
+        <div class="icon">❌</div>
+        <div><div>Cancelled</div><div style="font-size:0.72rem;font-weight:400;opacity:0.8;margin-top:2px;">Could not complete delivery</div></div>
       </button>
     </div>
+    <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
 
-    <div class="form-group" style="margin-top:12px;">
-      <label class="form-label">Notes (optional)</label>
-      <textarea class="form-input" id="modal-notes" rows="2" placeholder="Any details..."></textarea>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-update')">Cancel</button>
-      <button class="btn btn-purple" id="save-update-btn" onclick="saveUpdate()" disabled style="opacity:0.5;">Save Update</button>
-    </div>
+<!-- ── NOTIFICATION BANNER ── -->
+<div id="notif-banner">
+  <div style="font-size:1.5rem;line-height:1;flex-shrink:0;">🔔</div>
+  <div class="notif-banner-text">
+    <strong>Enable delivery alerts</strong>
+    <span>Get pinged when a new delivery is assigned</span>
+  </div>
+  <div class="notif-banner-btns">
+    <button class="notif-yes" onclick="enableNotifications()">Enable</button>
+    <button class="notif-no" onclick="dismissNotifBanner()">✕</button>
   </div>
 </div>
 
 <div class="toast hide" id="toast"></div>
-
-<!-- Notification Banner -->
-<div id="notif-banner" style="display:none;position:fixed;bottom:80px;left:16px;right:16px;background:linear-gradient(135deg,#0f1f4a,#1a3472);border:1px solid rgba(29,78,216,0.4);border-radius:18px;padding:18px 20px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,0.5);align-items:flex-start;gap:14px;max-width:480px;margin:0 auto;">
-  <div style="font-size:1.6rem;line-height:1;">🔔</div>
-  <div style="flex:1;">
-    <div style="font-weight:700;font-size:0.95rem;color:#fff;margin-bottom:4px;">Get delivery alerts</div>
-    <div style="font-size:0.82rem;color:rgba(255,255,255,0.65);margin-bottom:14px;line-height:1.5;">Get pinged the moment a new delivery is assigned to you — even on another tab.</div>
-    <div style="display:flex;gap:10px;">
-      <button onclick="enableNotifications()" style="background:linear-gradient(135deg,#1D4ED8,#3B82F6);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:0.85rem;font-weight:600;cursor:pointer;">Enable Notifications</button>
-      <button onclick="dismissNotifBanner()" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:none;border-radius:10px;padding:9px 14px;font-size:0.85rem;cursor:pointer;">Not now</button>
-    </div>
-  </div>
-</div>
 
 <script>
 const SB = 'https://azjwjswjecnacddcozuu.supabase.co';
@@ -376,52 +420,52 @@ async function doLogin() {
   const email = document.getElementById('le').value.trim();
   const pw = document.getElementById('lp').value;
   const err = document.getElementById('lerr');
+  const btn = document.getElementById('login-btn');
   err.style.display = 'none';
   if (!email || !pw) { err.textContent = 'Enter your email and password.'; err.style.display = 'block'; return; }
+  btn.textContent = 'Signing in...'; btn.disabled = true;
   try {
     const r = await fetch(`${SB}/auth/v1/token?grant_type=password`, {
-      method: 'POST', headers: { 'apikey': KEY, 'Content-Type': 'application/json' },
+      method:'POST', headers:{'apikey':KEY,'Content-Type':'application/json'},
       body: JSON.stringify({ email, password: pw })
     });
     const d = await r.json();
-    if (!r.ok) { err.textContent = d.error_description || 'Invalid credentials.'; err.style.display = 'block'; return; }
+    if (!r.ok) { err.textContent = d.error_description || 'Invalid credentials.'; err.style.display = 'block'; btn.textContent = 'Sign In'; btn.disabled = false; return; }
     user = d.user;
     localStorage.setItem('lw_logi_tok', d.access_token);
     localStorage.setItem('lw_logi_u', JSON.stringify(d.user));
     await setupProfile(d.user.id, d.access_token);
-  } catch(e) { err.textContent = 'Connection error. Try again.'; err.style.display = 'block'; }
+  } catch(e) {
+    err.textContent = 'Connection error. Try again.'; err.style.display = 'block';
+    btn.textContent = 'Sign In'; btn.disabled = false;
+  }
 }
 
 async function setupProfile(uid, token) {
   const err = document.getElementById('lerr');
   try {
-    const authHeaders = { ...H, 'Authorization': `Bearer ${token}` };
-
-    // 1. Try profiles table first (created by admin when making account)
-    const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${uid}&select=*`, { headers: authHeaders });
+    const ah = { ...H, 'Authorization': `Bearer ${token}` };
+    const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${uid}&select=*`, { headers: ah });
     const pdata = await pr.json();
-
-    // 2. Get logistics partner — match by user_id (most reliable) or phone as fallback
-    const lp = await fetch(`${SB}/rest/v1/logistics_partners?is_active=eq.true&select=*`, { headers: authHeaders });
+    const lp = await fetch(`${SB}/rest/v1/logistics_partners?is_active=eq.true&select=*`, { headers: ah });
     const lpdata = await lp.json();
     partner = lpdata.find(p => p.user_id === uid) || null;
-
     if (pdata.length) {
       profile = pdata[0];
     } else if (partner) {
-      // No profile row yet — build one from the logistics_partners record
-      profile = { id: uid, full_name: partner.name, phone: partner.phone, email: partner.email || '', role: 'logistics' };
+      profile = { id: uid, full_name: partner.name, phone: partner.phone, email: partner.email||'', role:'logistics' };
     } else {
-      err.textContent = 'Account not found. Contact admin.'; err.style.display = 'block'; return;
+      const btn = document.getElementById('login-btn');
+      err.textContent = 'Account not found. Contact admin.'; err.style.display = 'block';
+      btn.textContent = 'Sign In'; btn.disabled = false; return;
     }
-
-    // Refine partner match using phone if user_id match failed
-    if (!partner && profile.phone) {
-      partner = lpdata.find(p => p.phone === profile.phone) || null;
-    }
-
+    if (!partner && profile.phone) partner = lpdata.find(p => p.phone === profile.phone) || null;
     initApp();
-  } catch(e) { err.textContent = 'Setup error. Try again.'; err.style.display = 'block'; }
+  } catch(e) {
+    const btn = document.getElementById('login-btn');
+    err.textContent = 'Setup error. Try again.'; err.style.display = 'block';
+    btn.textContent = 'Sign In'; btn.disabled = false;
+  }
 }
 
 async function checkSession() {
@@ -434,23 +478,28 @@ function doLogout() {
   localStorage.removeItem('lw_logi_tok'); localStorage.removeItem('lw_logi_u');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-btn').textContent = 'Sign In';
+  document.getElementById('login-btn').disabled = false;
   user = null; profile = null; partner = null;
+  if (realtimeWs) { realtimeWs.close(); realtimeWs = null; }
 }
 
 function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const name = profile.full_name || 'Logistics';
-  const ini = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
+  const name = profile.full_name || 'Partner';
+  const ini = name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('topav').textContent = ini;
   document.getElementById('p-av').textContent = ini;
   document.getElementById('p-name').textContent = name;
-  document.getElementById('p-email').textContent = user.email;
-  document.getElementById('p-phone').textContent = profile.phone || '—';
+  document.getElementById('p-email').textContent = user?.email || profile.email || '—';
+  document.getElementById('p-phone').textContent = profile.phone || partner?.phone || '—';
   document.getElementById('p-area').textContent = partner?.coverage_area || '—';
   const hr = new Date().getHours();
-  const g = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-  document.getElementById('dash-greeting').textContent = `${g}, ${name.split(' ')[0]}`;
+  const g = hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  document.getElementById('dash-greeting').textContent = `${g}, ${name.split(' ')[0]} 👋`;
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-NG',{weekday:'long',day:'numeric',month:'long'});
+  updateNotifUI();
   loadDeliveries();
   startRealtimeListener();
   showNotifBannerIfNeeded();
@@ -458,8 +507,8 @@ function initApp() {
 
 // ── NAV ──
 function showPage(p) {
-  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById(`page-${p}`).classList.add('active');
   const n = document.getElementById(`nav-${p}`);
   if (n) n.classList.add('active');
@@ -473,36 +522,159 @@ async function loadDeliveries() {
     if (partner) q += `&logistics_partner_id=eq.${partner.id}`;
     allDeliveries = await api(q) || [];
     updateStats();
-    renderDashPending();
+    renderDashboard();
     renderDeliveries();
   } catch(e) { console.error(e); }
 }
 
 function updateStats() {
-  const assigned = allDeliveries.filter(d => d.status === 'assigned').length;
-  const transit = allDeliveries.filter(d => d.status === 'in_transit').length;
-  const delivered = allDeliveries.filter(d => ['delivered_payment_made','delivered_awaiting_payment'].includes(d.status)).length;
-  const toRemit = allDeliveries.filter(d => d.payment_method === 'cash_on_delivery' && d.customer_paid && !d.remitted_to_admin).reduce((s,d) => s + (parseFloat(d.amount_collected)||0), 0);
-  const collected = allDeliveries.filter(d => d.customer_paid).reduce((s,d) => s + (parseFloat(d.amount_collected)||0), 0);
-  const remitted = allDeliveries.filter(d => d.remitted_to_admin).reduce((s,d) => s + (parseFloat(d.amount_collected)||0), 0);
-  document.getElementById('st-assigned').textContent = assigned;
-  document.getElementById('st-transit').textContent = transit;
+  const pending = allDeliveries.filter(d=>d.status==='assigned').length;
+  const delivered = allDeliveries.filter(d=>['delivered_payment_made','delivered_awaiting_payment'].includes(d.status)).length;
+  const total = allDeliveries.length;
+  const toRemit = allDeliveries.filter(d=>d.customer_paid&&!d.remitted_to_admin).reduce((s,d)=>s+(parseFloat(d.amount_collected)||0),0);
+  const paid = allDeliveries.filter(d=>d.status==='delivered_payment_made').length;
+  const wait = allDeliveries.filter(d=>d.status==='delivered_awaiting_payment').length;
+  const cancelled = allDeliveries.filter(d=>d.status==='cancelled').length;
+
+  document.getElementById('st-assigned').textContent = pending;
   document.getElementById('st-delivered').textContent = delivered;
-  document.getElementById('st-remit').textContent = `₦${toRemit.toLocaleString()}`;
-  document.getElementById('pay-collected').textContent = `₦${collected.toLocaleString()}`;
-  document.getElementById('pay-remitted').textContent = `₦${remitted.toLocaleString()}`;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('sum-remit').textContent = `₦${toRemit.toLocaleString()}`;
+  document.getElementById('sum-paid').textContent = `${paid} order${paid!==1?'s':''}`;
+  document.getElementById('sum-wait').textContent = `${wait} order${wait!==1?'s':''}`;
+  document.getElementById('sum-cancel').textContent = `${cancelled} order${cancelled!==1?'s':''}`;
+
+  // Nav badge for pending
+  const badge = document.getElementById('nav-badge');
+  if (pending > 0) { badge.textContent = pending; badge.style.display = 'block'; }
+  else badge.style.display = 'none';
 }
 
-function renderDashPending() {
-  const pending = allDeliveries.filter(d => ['assigned','in_transit'].includes(d.status));
-  const el = document.getElementById('dash-pending-list');
-  if (!pending.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">All clear — no pending deliveries</div></div>'; return; }
-  el.innerHTML = pending.slice(0,3).map(d => deliveryCardHTML(d, true)).join('');
+function renderDashboard() {
+  const assigned = allDeliveries.filter(d => d.status === 'assigned');
+  const el = document.getElementById('dash-assigned-list');
+  if (!assigned.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">All deliveries done! Nothing pending.</div></div>';
+    return;
+  }
+  el.innerHTML = assigned.map(d => assignedCardHTML(d)).join('');
 }
 
+function assignedCardHTML(d) {
+  const o = d.orders || {};
+  const name = o.customer_name || '—';
+  const product = o.products?.name || '—';
+  const location = o.delivery_location || '—';
+  const phone = (o.customer_phone||'').replace(/[^0-9]/g,'').replace(/^0/,'234');
+  const amount = parseFloat(o.total_price||0);
+  const dStr = JSON.stringify(d).replace(/"/g,'&quot;');
+  return `<div class="assigned-card">
+    <div class="ac-top">
+      <div>
+        <div class="ac-name">${name}</div>
+        <div class="ac-product">${product}</div>
+      </div>
+      <div class="ac-status-dot"></div>
+    </div>
+    <div class="ac-info-row">
+      <div class="ac-info-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        ${location}
+      </div>
+      <div class="ac-info-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <span class="ac-amount">₦${amount.toLocaleString()}</span>
+      </div>
+    </div>
+    <div class="ac-actions">
+      <button class="ac-action-btn delivered-paid" onclick="quickUpdate(${dStr},'delivered_paid')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Paid
+      </button>
+      <button class="ac-action-btn delivered-wait" onclick="quickUpdate(${dStr},'delivered_pending')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Awaiting
+      </button>
+      <button class="ac-action-btn cancelled" onclick="quickUpdate(${dStr},'cancelled')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Cancel
+      </button>
+    </div>
+    ${phone?`<div class="ac-contact">
+      <a href="tel:+${phone}" class="contact-btn call">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.72A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        Call Customer
+      </a>
+      <a href="https://wa.me/${phone}" target="_blank" class="contact-btn whatsapp">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.848L.057 23.428c-.072.272.192.52.46.437l5.701-1.494A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 01-5.001-1.367l-.36-.214-3.713.973.992-3.61-.235-.372A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>
+        WhatsApp
+      </a>
+    </div>`:''}
+  </div>`;
+}
+
+// ── QUICK UPDATE (from dashboard — no modal needed) ──
+async function quickUpdate(d, action) {
+  await executeUpdate(d.id, d.orders?.id, d.orders?.products?.id, d.orders?.quantity||1, action);
+}
+
+// ── MODAL UPDATE (from deliveries list) ──
+function openUpdateModal(d) {
+  document.getElementById('modal-del-id').value = d.id;
+  document.getElementById('modal-del-order-id').value = d.orders?.id||'';
+  document.getElementById('modal-del-product-id').value = d.orders?.products?.id||'';
+  document.getElementById('modal-del-qty').value = d.orders?.quantity||1;
+  document.getElementById('modal-title').textContent = d.orders?.customer_name||'Update Delivery';
+  document.getElementById('modal-sub').textContent = `${d.orders?.products?.name||''} · ₦${parseFloat(d.orders?.total_price||0).toLocaleString()}`;
+  document.getElementById('modal-update').classList.add('open');
+}
+
+async function confirmUpdate(action) {
+  closeModal();
+  const id = document.getElementById('modal-del-id').value;
+  const orderId = document.getElementById('modal-del-order-id').value;
+  const productId = document.getElementById('modal-del-product-id').value;
+  const qty = parseInt(document.getElementById('modal-del-qty').value)||1;
+  await executeUpdate(id, orderId, productId, qty, action);
+}
+
+// ── CORE UPDATE LOGIC ──
+async function executeUpdate(id, orderId, productId, qty, action) {
+  const statusMap = {
+    delivered_paid:    { status:'delivered_payment_made',    customer_paid:true,  payment_method:'cash_on_delivery' },
+    delivered_pending: { status:'delivered_awaiting_payment', customer_paid:false, payment_method:'pending' },
+    cancelled:         { status:'cancelled',                  customer_paid:false, payment_method:'pending' }
+  };
+  const updates = { ...statusMap[action], updated_at: new Date().toISOString() };
+  const isDelivered = ['delivered_payment_made','delivered_awaiting_payment'].includes(updates.status);
+  try {
+    await api(`deliveries?id=eq.${id}`, 'PATCH', updates, { Prefer:'return=minimal' });
+    if (orderId) await api(`orders?id=eq.${orderId}`, 'PATCH', { status: updates.status }, { Prefer:'return=minimal' });
+    if (isDelivered && productId) await deductStock(productId, qty);
+    if (updates.customer_paid) {
+      const order = allDeliveries.find(d=>d.id===id)?.orders;
+      const amount = parseFloat(order?.total_price||0);
+      try { await api('payments','POST',{ amount_received:amount, confirmed_at:new Date().toISOString(), notes:`Collected by ${profile.full_name}` },{ Prefer:'return=minimal' }); } catch(e){}
+    }
+    const msgs = { delivered_paid:'✅ Marked delivered & paid', delivered_pending:'⏳ Marked delivered, awaiting payment', cancelled:'❌ Delivery cancelled' };
+    showToast(msgs[action]||'Updated!','success');
+    await loadDeliveries();
+  } catch(e) { showToast('Update failed: '+e.message,'error'); }
+}
+
+async function deductStock(productId, qty) {
+  try {
+    const stocks = await api(`stock?product_id=eq.${productId}&select=*`);
+    if (!stocks?.length) return;
+    const newQty = Math.max(0, (parseInt(stocks[0].quantity)||0) - qty);
+    await api(`stock?product_id=eq.${productId}`,'PATCH',{ quantity:newQty, updated_at:new Date().toISOString() },{ Prefer:'return=minimal' });
+  } catch(e) {}
+}
+
+// ── DELIVERIES LIST ──
 function filterDeliveries(filter, btn) {
   currentFilter = filter;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
   btn.classList.add('active');
   renderDeliveries();
 }
@@ -510,225 +682,170 @@ function filterDeliveries(filter, btn) {
 function renderDeliveries() {
   const el = document.getElementById('deliveries-list');
   if (!el) return;
-  let list = currentFilter === 'all' ? allDeliveries : allDeliveries.filter(d => d.status === currentFilter);
-  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No deliveries found</div></div>'; return; }
-  el.innerHTML = list.map(d => deliveryCardHTML(d, false)).join('');
-}
-
-function deliveryCardHTML(d, compact) {
-  const o = d.orders || {};
-  const name = o.customer_name || '—';
-  const product = o.products?.name || '—';
-  const location = o.delivery_location || '—';
-  const phone = (o.customer_phone || '').replace(/[^0-9]/g,'').replace(/^0/,'234');
-  const amount = parseFloat(o.total_price || 0);
-
-  const statusBadge = {
-    assigned: '<span class="badge badge-pending">Assigned</span>',
-    in_transit: '<span class="badge badge-transit">In Transit</span>',
-    delivered_payment_made: '<span class="badge badge-delivered">Delivered & Paid</span>',
-    delivered_awaiting_payment: '<span class="badge badge-transit">Awaiting Payment</span>',
-    cancelled: '<span class="badge badge-failed">Cancelled</span>',
-    failed: '<span class="badge badge-failed">Cancelled</span>'
-  }[d.status] || '';
-  const payBadge = d.customer_paid ? '<span class="badge badge-paid">Cust. Paid</span>' : '<span class="badge badge-unpaid">Unpaid</span>';
-  const remitBadge = d.remitted_to_admin ? '<span class="badge badge-remitted">Remitted</span>' : '';
-  const payLabel = d.payment_method === 'cash_on_delivery' ? '💵 Cash on Delivery' : d.payment_method === 'direct_transfer' ? '🏦 Direct Transfer' : '⏳ Awaiting Payment';
-
-  return `<div class="delivery-card">
-    <div class="delivery-card-header">
-      <div>
-        <div class="delivery-customer">${name}</div>
-        <div class="delivery-product">${product}</div>
+  let list = currentFilter==='all' ? allDeliveries : allDeliveries.filter(d=>d.status===currentFilter);
+  if (!list.length) { el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No deliveries found</div></div>'; return; }
+  el.innerHTML = list.map(d => {
+    const o = d.orders||{};
+    const phone = (o.customer_phone||'').replace(/[^0-9]/g,'').replace(/^0/,'234');
+    const statusLabels = { assigned:'Pending', in_transit:'In Transit', delivered_payment_made:'Delivered & Paid', delivered_awaiting_payment:'Awaiting Payment', cancelled:'Cancelled', failed:'Cancelled' };
+    const statusClasses = { assigned:'badge-assigned', in_transit:'badge-transit', delivered_payment_made:'badge-delivered', delivered_awaiting_payment:'badge-awaiting', cancelled:'badge-cancelled', failed:'badge-cancelled' };
+    const isPending = d.status==='assigned'||d.status==='in_transit';
+    return `<div class="delivery-card">
+      <div class="dc-header">
+        <div>
+          <div class="dc-name">${o.customer_name||'—'}</div>
+          <div class="dc-product">${o.products?.name||'—'}</div>
+        </div>
+        <div class="dc-badges"><span class="badge ${statusClasses[d.status]||'badge-assigned'}">${statusLabels[d.status]||d.status}</span></div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">${statusBadge}${payBadge}${remitBadge}</div>
-    </div>
-    <div class="delivery-meta">
-      <div class="delivery-meta-item"><div class="delivery-meta-label">Location</div><div class="delivery-meta-value">${location}</div></div>
-      <div class="delivery-meta-item"><div class="delivery-meta-label">Order Amount</div><div class="delivery-meta-value amount">₦${amount.toLocaleString()}</div></div>
-      <div class="delivery-meta-item"><div class="delivery-meta-label">Payment</div><div class="delivery-meta-value" style="font-size:0.76rem;">${payLabel}</div></div>
-      ${d.amount_collected && parseFloat(d.amount_collected) > 0 ? `<div class="delivery-meta-item"><div class="delivery-meta-label">Collected</div><div class="delivery-meta-value amount">₦${parseFloat(d.amount_collected).toLocaleString()}</div></div>` : ''}
-    </div>
-    ${!compact ? `<div class="delivery-actions">
-      <button class="btn btn-purple btn-sm" onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Update
-      </button>
-      ${phone ? `<a href="tel:+${phone}" class="btn btn-ghost btn-sm">📞 Call</a>` : ''}
-      ${phone ? `<a href="https://wa.me/${phone}" target="_blank" class="btn btn-ghost btn-sm" style="color:#25D366;">💬 WhatsApp</a>` : ''}
-    </div>` : `<button class="btn btn-purple btn-sm" style="margin-top:10px;width:100%;justify-content:center;" onclick="showPage('deliveries')">View & Update →</button>`}
-  </div>`;
+      <div class="meta-grid">
+        <div class="meta-item"><div class="meta-label">Location</div><div class="meta-val">${o.delivery_location||'—'}</div></div>
+        <div class="meta-item"><div class="meta-label">Amount</div><div class="meta-val mono">₦${parseFloat(o.total_price||0).toLocaleString()}</div></div>
+      </div>
+      ${isPending?`<button onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="width:100%;background:var(--blue-dim);color:var(--blue2);border:1px solid rgba(96,165,250,0.2);border-radius:12px;padding:11px;font-size:0.84rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;margin-top:4px;">Update Status</button>`:''}
+      ${phone&&isPending?`<div style="display:flex;gap:8px;margin-top:8px;">
+        <a href="tel:+${phone}" class="contact-btn call" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border-radius:10px;font-size:0.76rem;font-weight:600;font-family:'Outfit',sans-serif;text-decoration:none;background:rgba(37,99,235,0.1);color:var(--blue2);border:1px solid rgba(96,165,250,0.12);">📞 Call</a>
+        <a href="https://wa.me/${phone}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border-radius:10px;font-size:0.76rem;font-weight:600;font-family:'Outfit',sans-serif;text-decoration:none;background:rgba(37,211,102,0.08);color:#25D366;border:1px solid rgba(37,211,102,0.12);">💬 WhatsApp</a>
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 
-// ── UPDATE MODAL ──
-let selectedStatus = null;
-
-function openUpdateModal(d) {
-  selectedStatus = null;
-  document.getElementById('modal-del-id').value = d.id;
-  document.getElementById('modal-del-order-id').value = d.orders?.id || '';
-  document.getElementById('modal-del-product-id').value = d.orders?.products?.id || '';
-  document.getElementById('modal-del-qty').value = d.orders?.quantity || 1;
-  document.getElementById('modal-update-sub').textContent = `${d.orders?.customer_name || 'Delivery'} — ${d.orders?.products?.name || ''}`;
-  document.getElementById('modal-notes').value = '';
-  // Reset selection
-  document.querySelectorAll('.status-option').forEach(b => b.classList.remove('selected'));
-  const btn = document.getElementById('save-update-btn');
-  btn.disabled = true; btn.style.opacity = '0.5';
-  document.getElementById('modal-update').classList.add('open');
-}
-
-function selectStatus(status) {
-  selectedStatus = status;
-  document.querySelectorAll('.status-option').forEach(b => b.classList.remove('selected'));
-  const map = { delivered_paid: 'opt-delivered-paid', delivered_pending: 'opt-delivered-pending', cancelled: 'opt-cancelled' };
-  document.getElementById(map[status]).classList.add('selected');
-  const btn = document.getElementById('save-update-btn');
-  btn.disabled = false; btn.style.opacity = '1';
-}
-
-async function saveUpdate() {
-  if (!selectedStatus) return;
-  const id = document.getElementById('modal-del-id').value;
-  const orderId = document.getElementById('modal-del-order-id').value;
-  const productId = document.getElementById('modal-del-product-id').value;
-  const qty = parseInt(document.getElementById('modal-del-qty').value) || 1;
-  const notes = document.getElementById('modal-notes').value;
-
-  const statusMap = {
-    delivered_paid:    { status: 'delivered_payment_made',    customer_paid: true,  payment_method: 'cash_on_delivery' },
-    delivered_pending: { status: 'delivered_awaiting_payment', customer_paid: false, payment_method: 'pending' },
-    cancelled:         { status: 'cancelled',                  customer_paid: false, payment_method: 'pending' }
-  };
-
-  const updates = { ...statusMap[selectedStatus], notes, updated_at: new Date().toISOString() };
-  const isDelivered = ['delivered_payment_made', 'delivered_awaiting_payment'].includes(updates.status);
-
-  try {
-    // 1. Update delivery record
-    await api(`deliveries?id=eq.${id}`, 'PATCH', updates, { Prefer: 'return=minimal' });
-
-    // 2. Update orders table so admin stats/charts reflect it
-    if (orderId) {
-      await api(`orders?id=eq.${orderId}`, 'PATCH', {
-        status: updates.status
-      }, { Prefer: 'return=minimal' });
-    }
-
-    // 3. Deduct stock if delivered
-    if (isDelivered && productId) {
-      await deductStock(productId, qty);
-    }
-
-    // 4. Log payment record for admin reconciliation if paid
-    if (updates.customer_paid && orderId) {
-      const order = allDeliveries.find(d => d.id === id)?.orders;
-      const amount = parseFloat(order?.total_price || 0);
-      try {
-        await api('payments', 'POST', {
-          amount_received: amount,
-          confirmed_at: new Date().toISOString(),
-          notes: `Cash collected by ${profile.full_name}`
-        }, { Prefer: 'return=minimal' });
-      } catch(e) {}
-    }
-
-    closeModal('modal-update');
-    showToast(selectedStatus === 'cancelled' ? 'Delivery marked as cancelled' : 'Delivery updated!', 'success');
-    await loadDeliveries();
-  } catch(e) { showToast('Failed to update: ' + e.message, 'error'); }
-}
-
-async function deductStock(productId, qty) {
-  try {
-    // Get current stock
-    const stocks = await api(`stock?product_id=eq.${productId}&select=*`);
-    if (!stocks || !stocks.length) return;
-    const current = parseInt(stocks[0].quantity) || 0;
-    const newQty = Math.max(0, current - qty);
-    await api(`stock?product_id=eq.${productId}`, 'PATCH', {
-      quantity: newQty,
-      updated_at: new Date().toISOString()
-    }, { Prefer: 'return=minimal' });
-  } catch(e) { console.error('Stock deduction failed:', e); }
-}
-
-// ── MODAL UTILS ──
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); });
+// ── MODAL ──
+function closeModal() { document.getElementById('modal-update').classList.remove('open'); }
+document.addEventListener('click', e => { if (e.target.id==='modal-update') closeModal(); });
 
 // ── TOAST ──
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast ${type}`;
-  setTimeout(() => t.className = 'toast hide', 3500);
+  setTimeout(()=>t.className='toast hide', 3500);
 }
 
 // ── NOTIFICATIONS ──
+function updateNotifUI() {
+  const granted = Notification.permission === 'granted';
+  document.getElementById('p-notif-status').textContent = granted ? '✅ Enabled' : '❌ Off';
+  document.getElementById('p-notif-status').style.color = granted ? 'var(--green)' : 'var(--text3)';
+  document.getElementById('p-notif-btn').textContent = granted ? 'Notifications Enabled ✓' : 'Enable Push Notifications';
+  document.getElementById('p-notif-btn').style.opacity = granted ? '0.6' : '1';
+  document.getElementById('notif-dot').style.display = granted ? 'none' : 'block';
+}
+
 async function enableNotifications() {
   document.getElementById('notif-banner').style.display = 'none';
+  if (!('Notification' in window)) { showToast('Notifications not supported on this browser','error'); return; }
   const perm = await Notification.requestPermission();
+  localStorage.setItem('lw_logi_notif_asked','1');
   if (perm === 'granted') {
-    localStorage.setItem('lw_logi_notif', '1');
-    new Notification('🚚 Living Well Logistics', { body: 'Notifications enabled! You\'ll be pinged for new deliveries.' });
+    localStorage.setItem('lw_logi_notif','1');
+    showToast('🔔 Notifications enabled!','success');
+    new Notification('🚚 Living Well Logistics',{ body:"You'll be pinged for new deliveries." });
   } else {
-    localStorage.setItem('lw_logi_notif_no', '1');
+    showToast('Notifications blocked. Enable in browser settings.','info');
+  }
+  updateNotifUI();
+}
+
+async function requestNotifFromProfile() {
+  if (Notification.permission === 'granted') { showToast('Already enabled!','success'); return; }
+  await enableNotifications();
+}
+
+function toggleNotifRequest() {
+  if (Notification.permission !== 'granted') {
+    document.getElementById('notif-banner').style.display = 'flex';
+  } else {
+    showToast('Notifications are already on ✓','success');
   }
 }
 
 function dismissNotifBanner() {
   document.getElementById('notif-banner').style.display = 'none';
-  localStorage.setItem('lw_logi_notif_no', '1');
+  localStorage.setItem('lw_logi_notif_asked','1');
 }
 
 function showNotifBannerIfNeeded() {
   if (!('Notification' in window)) return;
-  if (Notification.permission === 'granted') return;
+  if (Notification.permission === 'granted') { updateNotifUI(); return; }
   if (Notification.permission === 'denied') return;
-  if (localStorage.getItem('lw_logi_notif') || localStorage.getItem('lw_logi_notif_no')) return;
-  setTimeout(() => { document.getElementById('notif-banner').style.display = 'flex'; }, 1500);
+  if (localStorage.getItem('lw_logi_notif_asked')) return;
+  setTimeout(() => { document.getElementById('notif-banner').style.display = 'flex'; }, 2000);
 }
 
 function triggerNotification(title, body) {
-  if (Notification.permission === 'granted') new Notification(title, { body, icon: '/icon.png', vibrate: [200,100,200] });
-  showToast(`${title}: ${body}`, 'success');
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon:'/icon.png' });
+  }
+  showToast(`${title}: ${body}`, 'info');
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
     const o = ctx.createOscillator(); const g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination);
-    o.frequency.setValueAtTime(880, ctx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
-    g.gain.setValueAtTime(0.3, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
+    o.frequency.setValueAtTime(660, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime+0.15);
+    o.frequency.exponentialRampToValueAtTime(660, ctx.currentTime+0.3);
+    g.gain.setValueAtTime(0.25, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.5);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime+0.5);
   } catch(e) {}
 }
 
-// ── REALTIME ──
+// ── REALTIME — uses auth token for proper connection ──
 let realtimeWs = null;
 function startRealtimeListener() {
   if (realtimeWs) return;
-  const ws = new WebSocket(`${SB.replace('https','wss')}/realtime/v1/websocket?apikey=${KEY}&vsn=1.0.0`);
+  // Use auth token in header via URL param for WebSocket
+  const wsUrl = `${SB.replace('https','wss')}/realtime/v1/websocket?apikey=${KEY}&vsn=1.0.0`;
+  const ws = new WebSocket(wsUrl);
   realtimeWs = ws;
-  ws.onopen = () => ws.send(JSON.stringify({ topic: 'realtime:public:deliveries', event: 'phx_join', payload: {}, ref: '1' }));
+
+  ws.onopen = () => {
+    // Join with auth token in payload for RLS
+    ws.send(JSON.stringify({
+      topic: 'realtime:public:deliveries',
+      event: 'phx_join',
+      payload: { user_token: tok() },
+      ref: '1'
+    }));
+    console.log('Realtime connected');
+  };
+
   ws.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
       if (msg.event === 'INSERT' && msg.payload?.record) {
         const rec = msg.payload.record;
         if (!partner || rec.logistics_partner_id === partner.id) {
-          triggerNotification('🚚 New Delivery Assigned', 'A new delivery has been assigned to you!');
+          triggerNotification('🚚 New Delivery!', 'A new delivery has been assigned to you');
           loadDeliveries();
         }
       }
+      // Also catch UPDATE — if admin reassigns
+      if (msg.event === 'UPDATE' && msg.payload?.record) {
+        const rec = msg.payload.record;
+        if (partner && rec.logistics_partner_id === partner.id) loadDeliveries();
+      }
     } catch(err) {}
   };
-  setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: '0' })); }, 25000);
+
+  ws.onerror = (e) => console.warn('Realtime error:', e);
+  ws.onclose = () => {
+    realtimeWs = null;
+    // Reconnect after 5s
+    setTimeout(() => { if (user) startRealtimeListener(); }, 5000);
+  };
+
+  setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ topic:'phoenix', event:'heartbeat', payload:{}, ref:'0' }));
+    }
+  }, 25000);
 }
 
 // ── INIT ──
 checkSession();
-document.getElementById('lp').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('lp').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
 </script>
 </body>
 </html>
