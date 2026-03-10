@@ -460,27 +460,39 @@ async function doLogin() {
 
 async function setupProfile(uid, token) {
   const err = document.getElementById('lerr');
+  const btn = document.getElementById('login-btn');
   try {
     const ah = { ...H, 'Authorization': `Bearer ${token}` };
+
+    // Fetch profile row
     const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${uid}&select=*`, { headers: ah });
     const pdata = await pr.json();
-    const lp = await fetch(`${SB}/rest/v1/logistics_partners?is_active=eq.true&select=*`, { headers: ah });
+
+    // Fetch partner by user_id directly — avoids RLS issues with fetching all partners
+    const lp = await fetch(`${SB}/rest/v1/logistics_partners?user_id=eq.${uid}&select=*`, { headers: ah });
     const lpdata = await lp.json();
-    partner = lpdata.find(p => p.user_id === uid) || null;
+    partner = (Array.isArray(lpdata) && lpdata.length) ? lpdata[0] : null;
+
+    // Fallback: if no user_id match, try matching by profile phone
+    if (!partner && pdata.length && pdata[0].phone) {
+      const lp2 = await fetch(`${SB}/rest/v1/logistics_partners?phone=eq.${encodeURIComponent(pdata[0].phone)}&select=*`, { headers: ah });
+      const lp2data = await lp2.json();
+      partner = (Array.isArray(lp2data) && lp2data.length) ? lp2data[0] : null;
+    }
+
     if (pdata.length) {
       profile = pdata[0];
     } else if (partner) {
       profile = { id: uid, full_name: partner.name, phone: partner.phone, email: partner.email||'', role:'logistics' };
     } else {
-      const btn = document.getElementById('login-btn');
       err.textContent = 'Account not found. Contact admin.'; err.style.display = 'block';
       btn.textContent = 'Sign In'; btn.disabled = false; return;
     }
-    if (!partner && profile.phone) partner = lpdata.find(p => p.phone === profile.phone) || null;
+
     initApp();
   } catch(e) {
-    const btn = document.getElementById('login-btn');
-    err.textContent = 'Setup error. Try again.'; err.style.display = 'block';
+    console.error('setupProfile error:', e);
+    err.textContent = 'Setup error: ' + e.message; err.style.display = 'block';
     btn.textContent = 'Sign In'; btn.disabled = false;
   }
 }
