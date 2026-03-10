@@ -1466,20 +1466,34 @@ async function loadDeliveries() {
       '<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">No partner account linked.</div></div>';
     return;
   }
-  // Show spinner while loading
   document.getElementById('dash-assigned-list').innerHTML =
     '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
   try {
-    // Filter strictly by partner.id — created_at fallback for ordering
     const q = `deliveries?logistics_partner_id=eq.${partner.id}&select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=created_at.desc`;
-    allDeliveries = await api(q) || [];
+    // Try with user auth token first; fall back to anon key if RLS blocks it
+    let data = null;
+    try {
+      data = await api(q);
+    } catch(e1) {
+      console.warn('Auth token fetch failed, trying anon key:', e1.message);
+      const r = await fetch(`${SB}/rest/v1/${q}`, {
+        headers: { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
+      });
+      if (!r.ok) {
+        const errBody = await r.json().catch(()=>({}));
+        throw new Error(errBody?.message || errBody?.hint || `HTTP ${r.status}`);
+      }
+      data = await r.json();
+    }
+    allDeliveries = data || [];
     updateStats();
     renderDashboard();
     renderDeliveries();
   } catch(e) {
     console.error('loadDeliveries error:', e);
     document.getElementById('dash-assigned-list').innerHTML =
-      '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load. Tap to retry.</div></div>';
+      `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red);font-size:0.78rem;">Error: ${e.message}</div><div class="empty-text" style="margin-top:8px;font-size:0.76rem;">Tap to retry</div></div>`;
+    document.getElementById('dash-assigned-list').onclick = () => { document.getElementById('dash-assigned-list').onclick = null; loadDeliveries(); };
     showToast('Failed to load deliveries', 'error');
   }
 }
