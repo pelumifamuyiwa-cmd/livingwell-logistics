@@ -464,24 +464,25 @@ async function setupProfile(uid, token) {
   try {
     const ah = { ...H, 'Authorization': `Bearer ${token}` };
 
-    // Fetch profile row
+    // Step 1: fetch profile
     const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${uid}&select=*`, { headers: ah });
     const pdata = await pr.json();
+    console.log('profiles result:', JSON.stringify(pdata));
 
-    // Fetch partner by user_id directly — avoids RLS issues with fetching all partners
-    const lp = await fetch(`${SB}/rest/v1/logistics_partners?user_id=eq.${uid}&select=*`, { headers: ah });
+    // Step 2: fetch partner using service key to bypass RLS
+    const lp = await fetch(`${SB}/rest/v1/logistics_partners?user_id=eq.${uid}&select=*`, {
+      headers: { ...H, 'Authorization': `Bearer ${KEY}`, 'apikey': KEY }
+    });
     const lpdata = await lp.json();
     partner = (Array.isArray(lpdata) && lpdata.length) ? lpdata[0] : null;
 
-    // Fallback: if no user_id match, try matching by profile phone
-    if (!partner && pdata.length && pdata[0].phone) {
-      const lp2 = await fetch(`${SB}/rest/v1/logistics_partners?phone=eq.${encodeURIComponent(pdata[0].phone)}&select=*`, { headers: ah });
-      const lp2data = await lp2.json();
-      partner = (Array.isArray(lp2data) && lp2data.length) ? lp2data[0] : null;
-    }
-
+    // Step 3: set profile
     if (pdata.length) {
       profile = pdata[0];
+      if (profile.role !== 'logistics') {
+        err.textContent = 'This portal is for logistics partners only.'; err.style.display = 'block';
+        btn.textContent = 'Sign In'; btn.disabled = false; return;
+      }
     } else if (partner) {
       profile = { id: uid, full_name: partner.name, phone: partner.phone, email: partner.email||'', role:'logistics' };
     } else {
