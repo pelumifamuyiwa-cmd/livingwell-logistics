@@ -1469,23 +1469,10 @@ async function loadDeliveries() {
   document.getElementById('dash-assigned-list').innerHTML =
     '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
   try {
-    const q = `deliveries?logistics_partner_id=eq.${partner.id}&select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc.nullslast`;
-    // Try with user auth token first; fall back to anon key if RLS blocks it
-    let data = null;
-    try {
-      data = await api(q);
-    } catch(e1) {
-      console.warn('Auth token fetch failed, trying anon key:', e1.message);
-      const r = await fetch(`${SB}/rest/v1/${q}`, {
-        headers: { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
-      });
-      if (!r.ok) {
-        const errBody = await r.json().catch(()=>({}));
-        throw new Error(errBody?.message || errBody?.hint || `HTTP ${r.status}`);
-      }
-      data = await r.json();
-    }
-    allDeliveries = data || [];
+    // Use the same query as the original — filter client-side to avoid RLS issues
+    const raw = await api(`deliveries?select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc`) || [];
+    // Client-side filter: only show THIS partner's deliveries
+    allDeliveries = raw.filter(d => d.logistics_partner_id === partner.id);
     updateStats();
     renderDashboard();
     renderDeliveries();
@@ -1494,7 +1481,6 @@ async function loadDeliveries() {
     document.getElementById('dash-assigned-list').innerHTML =
       `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red);font-size:0.78rem;">Error: ${e.message}</div><div class="empty-text" style="margin-top:8px;font-size:0.76rem;">Tap to retry</div></div>`;
     document.getElementById('dash-assigned-list').onclick = () => { document.getElementById('dash-assigned-list').onclick = null; loadDeliveries(); };
-    showToast('Failed to load deliveries', 'error');
   }
 }
 
@@ -1697,7 +1683,8 @@ async function loadStockInbox() {
   if (!el) return;
   if (!partner) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">No partner account linked</div></div>'; return; }
   try {
-    const data = await api(`logistics_stock?logistics_partner_id=eq.${partner.id}&select=*,products(id,name,price)&order=sent_at.desc`) || [];
+    const raw2 = await api(`logistics_stock?select=*,products(id,name,price)&order=sent_at.desc`) || [];
+    const data = raw2.filter(s => s.logistics_partner_id === partner.id);
     const unconfirmed = data.filter(s => !s.confirmed).length;
     const badge = document.getElementById('stock-badge');
     if (badge) { badge.textContent = unconfirmed; badge.style.display = unconfirmed > 0 ? 'block' : 'none'; }
