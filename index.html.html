@@ -1469,7 +1469,7 @@ async function loadDeliveries() {
   document.getElementById('dash-assigned-list').innerHTML =
     '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
   try {
-    const q = `deliveries?logistics_partner_id=eq.${partner.id}&select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=created_at.desc`;
+    const q = `deliveries?logistics_partner_id=eq.${partner.id}&select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc.nullslast`;
     // Try with user auth token first; fall back to anon key if RLS blocks it
     let data = null;
     try {
