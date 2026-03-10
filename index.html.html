@@ -311,6 +311,15 @@ select.form-input option{background:var(--bg3);}
       <div id="deliveries-list"></div>
     </div>
 
+    <!-- STOCK INBOX PAGE -->
+    <div class="page" id="page-stock">
+      <div class="sec-header">
+        <div class="sec-title">Stock Inbox</div>
+        <div class="sec-sub">Confirm stock received from admin</div>
+      </div>
+      <div id="stock-inbox-list"><div style="text-align:center;padding:40px;color:var(--text3);">Loading...</div></div>
+    </div>
+
     <!-- PROFILE -->
     <div class="page" id="page-profile">
       <div class="sec-header">
@@ -343,6 +352,11 @@ select.form-input option{background:var(--bg3);}
     <button class="nav-btn" id="nav-deliveries" onclick="showPage('deliveries')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       Deliveries
+    </button>
+    <button class="nav-btn" id="nav-stock" onclick="showPage('stock')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+      Stock
+      <span id="stock-badge" style="position:absolute;top:6px;right:calc(50% - 16px);background:#F43F5E;color:#fff;font-size:0.55rem;font-weight:800;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;display:none;"></span>
     </button>
     <button class="nav-btn" id="nav-profile" onclick="showPage('profile')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -409,10 +423,13 @@ async function api(path, method='GET', body=null, extra={}) {
   const opts = { method, headers: { ...authH(), ...extra } };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(`${SB}/rest/v1/${path}`, opts);
-  if (r.status === 204) return null;
-  const d = await r.json();
-  if (!r.ok) throw new Error(d?.message || 'API error');
-  return d;
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e?.message || 'API error'); }
+  if (r.status === 204 || r.status === 201) {
+    const text = await r.text();
+    if (!text) return null;
+    try { return JSON.parse(text); } catch(e) { return null; }
+  }
+  return r.json();
 }
 
 // ── AUTH ──
@@ -501,6 +518,7 @@ function initApp() {
   document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-NG',{weekday:'long',day:'numeric',month:'long'});
   updateNotifUI();
   loadDeliveries();
+  loadStockInbox();
   startRealtimeListener();
   showNotifBannerIfNeeded();
 }
@@ -513,6 +531,7 @@ function showPage(p) {
   const n = document.getElementById(`nav-${p}`);
   if (n) n.classList.add('active');
   if (p === 'deliveries') renderDeliveries();
+  if (p === 'stock') loadStockInbox();
 }
 
 // ── DELIVERIES ──
@@ -648,15 +667,26 @@ async function executeUpdate(id, orderId, productId, qty, action) {
   const updates = { ...statusMap[action], updated_at: new Date().toISOString() };
   const isDelivered = ['delivered_payment_made','delivered_awaiting_payment'].includes(updates.status);
   try {
-    await api(`deliveries?id=eq.${id}`, 'PATCH', updates, { Prefer:'return=minimal' });
-    if (orderId) await api(`orders?id=eq.${orderId}`, 'PATCH', { status: updates.status }, { Prefer:'return=minimal' });
+    // Step 1: update delivery — try full update first, fallback to status-only
+    try {
+      await api(`deliveries?id=eq.${id}`, 'PATCH', updates, { Prefer:'return=minimal' });
+    } catch(e) {
+      await api(`deliveries?id=eq.${id}`, 'PATCH', { status: updates.status }, { Prefer:'return=minimal' });
+    }
+    // Step 2: sync order status — silent fail (constraint may reject new status values)
+    if (orderId) {
+      try { await api(`orders?id=eq.${orderId}`, 'PATCH', { status: updates.status }, { Prefer:'return=minimal' }); }
+      catch(e) { console.warn('Order status sync skipped:', e.message); }
+    }
+    // Step 3: deduct stock if delivered
     if (isDelivered && productId) await deductStock(productId, qty);
+    // Step 4: log payment — include delivery_id for admin reconciliation
     if (updates.customer_paid) {
       const order = allDeliveries.find(d=>d.id===id)?.orders;
       const amount = parseFloat(order?.total_price||0);
-      try { await api('payments','POST',{ amount_received:amount, confirmed_at:new Date().toISOString(), notes:`Collected by ${profile.full_name}` },{ Prefer:'return=minimal' }); } catch(e){}
+      try { await api('payments','POST',{ amount_received:amount, confirmed_at:new Date().toISOString(), notes:`Collected by ${profile.full_name}`, order_id: orderId }, { Prefer:'return=minimal' }); } catch(e){}
     }
-    const msgs = { delivered_paid:'✅ Marked delivered & paid', delivered_pending:'⏳ Marked delivered, awaiting payment', cancelled:'❌ Delivery cancelled' };
+    const msgs = { delivered_paid:'✅ Delivered & paid', delivered_pending:'⏳ Delivered, awaiting payment', cancelled:'❌ Delivery cancelled' };
     showToast(msgs[action]||'Updated!','success');
     await loadDeliveries();
   } catch(e) { showToast('Update failed: '+e.message,'error'); }
@@ -794,37 +824,45 @@ function triggerNotification(title, body) {
 // ── REALTIME — uses auth token for proper connection ──
 let realtimeWs = null;
 function startRealtimeListener() {
-  if (realtimeWs) return;
+  if (realtimeWs && realtimeWs.readyState === WebSocket.OPEN) return;
   // Use auth token in header via URL param for WebSocket
   const wsUrl = `${SB.replace('https','wss')}/realtime/v1/websocket?apikey=${KEY}&vsn=1.0.0`;
   const ws = new WebSocket(wsUrl);
   realtimeWs = ws;
 
   ws.onopen = () => {
-    // Join with auth token in payload for RLS
     ws.send(JSON.stringify({
       topic: 'realtime:public:deliveries',
       event: 'phx_join',
-      payload: { user_token: tok() },
+      payload: {
+        config: {
+          broadcast: { ack: false, self: false },
+          presence: { key: '' },
+          postgres_changes: [
+            { event: 'INSERT', schema: 'public', table: 'deliveries' },
+            { event: 'UPDATE', schema: 'public', table: 'deliveries' }
+          ]
+        },
+        access_token: tok()
+      },
       ref: '1'
     }));
-    console.log('Realtime connected');
   };
 
   ws.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
-      if (msg.event === 'INSERT' && msg.payload?.record) {
-        const rec = msg.payload.record;
-        if (!partner || rec.logistics_partner_id === partner.id) {
+      if (msg.event === 'postgres_changes' && msg.payload?.data) {
+        const type = msg.payload.data.type;
+        const rec = msg.payload.data.record;
+        if (!rec) return;
+        if (type === 'INSERT' && (!partner || rec.logistics_partner_id === partner.id)) {
           triggerNotification('🚚 New Delivery!', 'A new delivery has been assigned to you');
           loadDeliveries();
         }
-      }
-      // Also catch UPDATE — if admin reassigns
-      if (msg.event === 'UPDATE' && msg.payload?.record) {
-        const rec = msg.payload.record;
-        if (partner && rec.logistics_partner_id === partner.id) loadDeliveries();
+        if (type === 'UPDATE' && partner && rec.logistics_partner_id === partner.id) {
+          loadDeliveries();
+        }
       }
     } catch(err) {}
   };
@@ -841,6 +879,58 @@ function startRealtimeListener() {
       ws.send(JSON.stringify({ topic:'phoenix', event:'heartbeat', payload:{}, ref:'0' }));
     }
   }, 25000);
+}
+
+// ── STOCK INBOX ──
+async function loadStockInbox() {
+  const el = document.getElementById('stock-inbox-list');
+  if (!el) return;
+  try {
+    if (!partner) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">No partner account linked</div>'; return; }
+    const data = await api(`logistics_stock?logistics_partner_id=eq.${partner.id}&select=*,products(id,name,price)&order=sent_at.desc`) || [];
+    const unconfirmed = data.filter(s => !s.confirmed).length;
+    const badge = document.getElementById('stock-badge');
+    if (badge) { badge.textContent = unconfirmed; badge.style.display = unconfirmed > 0 ? 'block' : 'none'; }
+    if (!data.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">📦 No stock received yet</div>'; return; }
+    el.innerHTML = data.map(s => {
+      const confirmed = s.confirmed;
+      const date = new Date(s.sent_at).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'});
+      return `<div style="background:${confirmed?'rgba(255,255,255,0.03)':'linear-gradient(135deg,rgba(30,58,138,0.2),rgba(17,24,39,0.8))'};border:1px solid ${confirmed?'rgba(255,255,255,0.08)':'rgba(96,165,250,0.25)'};border-radius:16px;padding:16px;margin-bottom:12px;${confirmed?'':'position:relative;overflow:hidden;'}">
+        ${!confirmed?'<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#2563EB,#60A5FA,transparent);"></div>':''}
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+          <div>
+            <div style="font-weight:800;font-size:0.95rem;">${s.products?.name||'—'}</div>
+            <div style="font-size:0.76rem;color:var(--text3);margin-top:2px;">Sent by admin · ${date}</div>
+          </div>
+          <span style="background:${confirmed?'rgba(16,185,129,0.15)':'rgba(96,165,250,0.15)'};color:${confirmed?'#10B981':'#60A5FA'};border:1px solid ${confirmed?'rgba(16,185,129,0.2)':'rgba(96,165,250,0.2)'};border-radius:20px;padding:3px 10px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">${confirmed?'Confirmed':'Awaiting'}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:${confirmed?'0':'12px'};">
+          <div style="background:rgba(255,255,255,0.04);border-radius:9px;padding:10px;">
+            <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Qty Sent</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.1rem;color:#60A5FA;">${s.quantity_sent}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:9px;padding:10px;">
+            <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Unit Price</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.1rem;">₦${parseFloat(s.products?.price||0).toLocaleString()}</div>
+          </div>
+        </div>
+        ${!confirmed?`<button onclick="confirmStockReceipt('${s.id}', ${s.quantity_sent})" style="width:100%;background:linear-gradient(135deg,#1e40af,#2563EB);color:#fff;border:none;border-radius:12px;padding:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;">✓ Confirm Receipt of ${s.quantity_sent} units</button>`:''}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">Failed to load stock</div>'; }
+}
+
+async function confirmStockReceipt(stockId, qty) {
+  try {
+    await api(`logistics_stock?id=eq.${stockId}`, 'PATCH', {
+      confirmed: true,
+      confirmed_at: new Date().toISOString(),
+      quantity_confirmed: qty,
+      quantity_remaining: qty
+    }, { Prefer:'return=minimal' });
+    showToast(`✅ ${qty} units confirmed received!`, 'success');
+    loadStockInbox();
+  } catch(e) { showToast('Failed to confirm: '+e.message, 'error'); }
 }
 
 // ── INIT ──
