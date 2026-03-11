@@ -1186,7 +1186,13 @@ body::before {
 
       <div class="section-label">Today's Summary</div>
       <div class="summary-card">
-        <div class="summary-row"><span class="summary-key">Cash to remit to admin</span><span class="summary-val amber mono" id="sum-remit">₦0</span></div>
+        <div class="summary-row">
+          <span class="summary-key">Cash to remit to admin</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span class="summary-val amber mono" id="sum-remit">₦0</span>
+            <button id="btn-remit" onclick="openRemitModal()" style="display:none;font-size:0.68rem;font-weight:700;padding:4px 10px;border-radius:20px;border:none;background:linear-gradient(135deg,#7C3AED,#9f61f7);color:#fff;cursor:pointer;white-space:nowrap;">✓ Remit</button>
+          </span>
+        </div>
         <div class="summary-row"><span class="summary-key">Delivered &amp; paid</span><span class="summary-val green" id="sum-paid">0 orders</span></div>
         <div class="summary-row"><span class="summary-key">Awaiting payment</span><span class="summary-val amber" id="sum-wait">0 orders</span></div>
         <div class="summary-row"><span class="summary-key">Cancelled today</span><span class="summary-val" id="sum-cancel" style="color:var(--text3);">0 orders</span></div>
@@ -1319,6 +1325,28 @@ body::before {
       <div>✅ Confirm — Cash Received</div>
     </button>
     <button class="modal-cancel" onclick="closePayRecvModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Remit Modal -->
+<div class="modal-overlay" id="modal-remit">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💵 Remit Cash to Admin</div>
+    <div class="modal-sub">Confirm you have handed over the collected cash</div>
+    <div style="padding:0 4px 16px;">
+      <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Total to hand over</div>
+        <div style="font-size:2rem;font-weight:800;color:#a78bfa;" id="remit-modal-amount">₦0</div>
+      </div>
+      <div style="font-size:0.8rem;color:var(--text2);line-height:1.6;background:var(--bg3);border-radius:10px;padding:12px;">
+        By tapping confirm, you are acknowledging that you have physically handed this cash to the admin. This action cannot be undone.
+      </div>
+    </div>
+    <button class="modal-opt green" style="width:100%;justify-content:center;" onclick="confirmRemit()">
+      ✅ Yes, I have remitted the cash
+    </button>
+    <button class="modal-cancel" onclick="closeRemitModal()">Cancel</button>
   </div>
 </div>
 
@@ -1531,6 +1559,8 @@ function updateStats() {
   document.getElementById('st-delivered').textContent = delivered;
   document.getElementById('st-total').textContent = total;
   document.getElementById('sum-remit').textContent = `₦${toRemit.toLocaleString()}`;
+  const remitBtn = document.getElementById('btn-remit');
+  if (remitBtn) remitBtn.style.display = toRemit > 0 ? 'inline-block' : 'none';
   document.getElementById('sum-paid').textContent = `${paid} order${paid !== 1 ? 's' : ''}`;
   document.getElementById('sum-wait').textContent = `${wait} order${wait !== 1 ? 's' : ''}`;
   document.getElementById('sum-cancel').textContent = `${cancelled} order${cancelled !== 1 ? 's' : ''}`;
@@ -1664,9 +1694,32 @@ function closeModal() { document.getElementById('modal-update').classList.remove
 document.addEventListener('click', e => {
   if (e.target.id === 'modal-update') closeModal();
   if (e.target.id === 'modal-pay-received') closePayRecvModal();
+  if (e.target.id === 'modal-remit') closeRemitModal();
 });
 
 function closePayRecvModal() { document.getElementById('modal-pay-received').classList.remove('open'); }
+function closeRemitModal() { document.getElementById('modal-remit').classList.remove('open'); }
+
+function openRemitModal() {
+  const amount = document.getElementById('sum-remit').textContent;
+  document.getElementById('remit-modal-amount').textContent = amount;
+  document.getElementById('modal-remit').classList.add('open');
+}
+
+async function confirmRemit() {
+  // Mark all unremitted delivered_payment_made deliveries as remitted
+  const toRemit = allDeliveries.filter(d =>
+    d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin
+  );
+  try {
+    for (const d of toRemit) {
+      await api(`deliveries?id=eq.${d.id}`, 'PATCH', { remitted_to_admin: true }, { Prefer: 'return=minimal' });
+    }
+    closeRemitModal();
+    showToast('✅ Cash remittance recorded!', 'success');
+    await loadDeliveries();
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
 
 function markPaymentReceived(deliveryId, orderId, customerName, amount) {
   document.getElementById('pay-recv-del-id').value = deliveryId;
