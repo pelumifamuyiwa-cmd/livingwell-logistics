@@ -1870,8 +1870,8 @@ async function uploadRemitReceipt(file, partnerId) {
     // Compress image to max 1200px wide, 75% quality (~200–400KB)
     const compressed = await compressImage(file, 1200, 0.75);
     const fileName = `${partnerId || 'unknown'}_${Date.now()}.jpg`;
-    const encodedBucket = encodeURIComponent(BUCKET);
-    const res = await fetch(`${SB}/storage/v1/object/${encodedBucket}/${fileName}`, {
+    const bucketEncoded = encodeURIComponent(BUCKET);
+    const res = await fetch(`${SB}/storage/v1/object/${bucketEncoded}/${fileName}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${tok()}`,
@@ -1884,19 +1884,10 @@ async function uploadRemitReceipt(file, partnerId) {
     if (!res.ok) {
       const err = await res.text();
       console.warn('Receipt upload failed:', err);
-      // Try with raw bucket name (no encoding) as fallback
-      const res2 = await fetch(`${SB}/storage/v1/object/${BUCKET}/${fileName}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${tok()}`, 'apikey': KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
-        body: compressed
-      });
-      if (!res2.ok) {
-        showToast('⚠️ Receipt upload failed — remittance still recorded', 'warning');
-        return null;
-      }
-      return `${SB}/storage/v1/object/public/${BUCKET}/${fileName}`;
+      showToast('⚠️ Receipt upload failed — remittance still recorded', 'warning');
+      return null;
     }
-    return `${SB}/storage/v1/object/public/${encodedBucket}/${fileName}`;
+    return `${SB}/storage/v1/object/public/${bucketEncoded}/${fileName}`;
   } catch(e) {
     console.warn('Receipt upload error:', e);
     return null;
