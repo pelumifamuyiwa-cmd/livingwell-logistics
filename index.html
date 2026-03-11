@@ -1360,17 +1360,36 @@ body::before {
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">💵 Remit Cash to Admin</div>
-    <div class="modal-sub">Confirm you have handed over the collected cash</div>
+    <div class="modal-sub">Upload proof of payment then confirm</div>
     <div style="padding:0 4px 16px;">
-      <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
+      <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;">
         <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Total to hand over</div>
         <div style="font-size:2rem;font-weight:800;color:#a78bfa;" id="remit-modal-amount">₦0</div>
       </div>
-      <div style="font-size:0.8rem;color:var(--text2);line-height:1.6;background:var(--bg3);border-radius:10px;padding:12px;">
-        By tapping confirm, you are acknowledging that you have physically handed this cash to the admin. This action cannot be undone.
+
+      <!-- Receipt upload area -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.4px;">Receipt / Proof of Payment</div>
+        <input type="file" id="remit-receipt-input" accept="image/*" capture="environment" style="display:none;" onchange="onRemitReceiptSelected()">
+        <div id="remit-upload-area" onclick="document.getElementById('remit-receipt-input').click()"
+          style="border:2px dashed rgba(124,58,237,0.35);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;">
+          <div style="font-size:1.4rem;margin-bottom:6px;">📷</div>
+          <div style="font-size:0.8rem;font-weight:600;color:#a78bfa;">Tap to take photo or upload</div>
+          <div style="font-size:0.7rem;color:var(--text3);margin-top:3px;">JPG, PNG supported</div>
+        </div>
+        <div id="remit-preview-wrap" style="display:none;position:relative;margin-top:10px;">
+          <img id="remit-preview-img" src="" alt="Receipt preview"
+            style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.1);">
+          <button onclick="clearRemitReceipt()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);border:none;color:#fff;border-radius:50%;width:26px;height:26px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:6px;padding:0 2px;">Optional but recommended for reconciliation records.</div>
+      </div>
+
+      <div style="font-size:0.78rem;color:var(--text2);line-height:1.6;background:var(--bg3);border-radius:10px;padding:12px;">
+        By tapping confirm, you acknowledge that you have physically handed this cash to the admin. This cannot be undone.
       </div>
     </div>
-    <button class="modal-opt green" style="width:100%;justify-content:center;" onclick="confirmRemit()">
+    <button class="modal-opt green" style="width:100%;justify-content:center;" id="remit-confirm-btn" onclick="confirmRemit()">
       ✅ Yes, I have remitted the cash
     </button>
     <button class="modal-cancel" onclick="closeRemitModal()">Cancel</button>
@@ -1729,7 +1748,10 @@ document.addEventListener('click', e => {
 });
 
 function closePayRecvModal() { document.getElementById('modal-pay-received').classList.remove('open'); }
-function closeRemitModal() { document.getElementById('modal-remit').classList.remove('open'); }
+function closeRemitModal() {
+  document.getElementById('modal-remit').classList.remove('open');
+  clearRemitReceipt();
+}
 
 function openRemitModal() {
   const amount = document.getElementById('sum-remit').textContent;
@@ -1737,19 +1759,83 @@ function openRemitModal() {
   document.getElementById('modal-remit').classList.add('open');
 }
 
+function onRemitReceiptSelected() {
+  const file = document.getElementById('remit-receipt-input').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('remit-preview-img').src = e.target.result;
+    document.getElementById('remit-preview-wrap').style.display = 'block';
+    document.getElementById('remit-upload-area').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearRemitReceipt() {
+  document.getElementById('remit-receipt-input').value = '';
+  document.getElementById('remit-preview-wrap').style.display = 'none';
+  document.getElementById('remit-upload-area').style.display = 'block';
+}
+
+async function uploadRemitReceipt(file, partnerId) {
+  if (!file) return null;
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const fileName = `${partnerId || 'unknown'}_${Date.now()}.${ext}`;
+    const res = await fetch(`${SB}/storage/v1/object/remittance-receipts/${fileName}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tok()}`,
+        'apikey': KEY,
+        'Content-Type': file.type || 'image/jpeg',
+        'x-upsert': 'true'
+      },
+      body: file
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.warn('Receipt upload failed:', err);
+      showToast('⚠️ Receipt upload failed — remittance still recorded', 'warning');
+      return null;
+    }
+    return `${SB}/storage/v1/object/public/remittance-receipts/${fileName}`;
+  } catch(e) {
+    console.warn('Receipt upload error:', e);
+    return null;
+  }
+}
+
 async function confirmRemit() {
-  // Mark all unremitted delivered_payment_made deliveries as remitted
+  const btn = document.getElementById('remit-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
   const toRemit = allDeliveries.filter(d =>
     d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin
   );
+
   try {
+    // Upload receipt if selected
+    const file = document.getElementById('remit-receipt-input').files[0];
+    const receiptUrl = await uploadRemitReceipt(file, partner?.id);
+    const remittedAt = new Date().toISOString();
+
     for (const d of toRemit) {
-      await api(`deliveries?id=eq.${d.id}`, 'PATCH', { remitted_to_admin: true }, { Prefer: 'return=minimal' });
+      const patch = { remitted_to_admin: true, remitted_at: remittedAt };
+      if (receiptUrl) patch.remittance_receipt_url = receiptUrl;
+      await api(`deliveries?id=eq.${d.id}`, 'PATCH', patch, { Prefer: 'return=minimal' });
     }
+
     closeRemitModal();
+    clearRemitReceipt();
     showToast('✅ Cash remittance recorded!', 'success');
     await loadDeliveries();
-  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✅ Yes, I have remitted the cash';
+  }
 }
 
 function markPaymentReceived(deliveryId, orderId, customerName, amount) {
