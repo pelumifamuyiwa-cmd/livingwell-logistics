@@ -1361,8 +1361,10 @@ body::before {
     <div class="modal-handle"></div>
     <div class="modal-title">💵 Remit Cash to Admin</div>
     <div class="modal-sub">Upload proof of payment then confirm</div>
+    <input type="hidden" id="remit-selected-ids" value="[]">
     <div style="padding:0 4px 16px;">
       <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;">
+        <div style="font-size:0.7rem;color:#a78bfa;font-weight:600;margin-bottom:4px;" id="remit-mode-label"></div>
         <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Total to hand over</div>
         <div style="font-size:2rem;font-weight:800;color:#a78bfa;" id="remit-modal-amount">₦0</div>
       </div>
@@ -1700,17 +1702,39 @@ function renderDeliveries() {
   const statusLabels = { assigned:'Pending', in_transit:'In Transit', delivered_payment_made:'Delivered & Paid', delivered_awaiting_payment:'Awaiting Pay', cancelled:'Cancelled', failed:'Cancelled' };
   const statusClasses = { assigned:'b-assigned', in_transit:'b-assigned', delivered_payment_made:'b-delivered', delivered_awaiting_payment:'b-awaiting', cancelled:'b-cancelled', failed:'b-cancelled' };
 
-  el.innerHTML = list.map(d => {
+  // Check if any deliveries are remittable
+  const remittable = list.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
+
+  const bulkBar = remittable.length > 0 ? `
+    <div id="bulk-remit-bar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#7C3AED,#9f61f7);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div>
+        <div style="font-size:0.8rem;font-weight:700;color:#fff;" id="bulk-selected-label">0 selected</div>
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.75);" id="bulk-selected-amount">₦0 to remit</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="selectAllRemittable()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:7px 12px;font-size:0.72rem;font-weight:600;cursor:pointer;">Select All</button>
+        <button onclick="openBulkRemitModal()" style="background:#fff;border:none;color:#7C3AED;border-radius:8px;padding:7px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;">Remit Selected →</button>
+      </div>
+    </div>` : '';
+
+  el.innerHTML = bulkBar + list.map(d => {
     const o = d.orders || {};
     const phone = (o.customer_phone||'').replace(/[^0-9]/g,'').replace(/^0/,'234');
     const isPending = d.status === 'assigned' || d.status === 'in_transit';
-    return `<div class="delivery-card">
+    const isRemittable = d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin;
+    const isRemitted = d.remitted_to_admin === true;
+    return `<div class="delivery-card" id="dcard-${d.id}">
       <div class="dc-top">
-        <div>
-          <div class="dc-name">${o.customer_name||'—'}</div>
-          <div class="dc-product">${o.products?.name||'—'}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex:1;">
+          ${isRemittable ? `<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||o.total_price||0)}"
+            style="width:18px;height:18px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;"
+            onclick="event.stopPropagation();updateBulkBar()">` : ''}
+          <div>
+            <div class="dc-name">${o.customer_name||'—'}</div>
+            <div class="dc-product">${o.products?.name||'—'}</div>
+          </div>
         </div>
-        <span class="badge ${statusClasses[d.status]||'b-assigned'}">${statusLabels[d.status]||d.status}</span>
+        <span class="badge ${statusClasses[d.status]||'b-assigned'}">${isRemitted ? '✓ Remitted' : (statusLabels[d.status]||d.status)}</span>
       </div>
       <div class="dc-meta">
         <div class="dc-meta-item"><div class="dc-meta-lbl">Location</div><div class="dc-meta-val">${o.delivery_location||'—'}</div></div>
@@ -1727,6 +1751,38 @@ function renderDeliveries() {
       </div>` : ''}
     </div>`;
   }).join('');
+
+  updateBulkBar();
+}
+
+
+function updateBulkBar() {
+  const checks = document.querySelectorAll('.remit-check:checked');
+  const total = Array.from(checks).reduce((s,c) => s + parseFloat(c.dataset.amount||0), 0);
+  const bar = document.getElementById('bulk-remit-bar');
+  const lbl = document.getElementById('bulk-selected-label');
+  const amt = document.getElementById('bulk-selected-amount');
+  if (lbl) lbl.textContent = `${checks.length} selected`;
+  if (amt) amt.textContent = `₦${total.toLocaleString()} to remit`;
+  if (bar) bar.style.opacity = checks.length > 0 ? '1' : '0.6';
+}
+
+function selectAllRemittable() {
+  const checks = document.querySelectorAll('.remit-check');
+  const allChecked = Array.from(checks).every(c => c.checked);
+  checks.forEach(c => c.checked = !allChecked);
+  updateBulkBar();
+}
+
+function openBulkRemitModal() {
+  const checks = document.querySelectorAll('.remit-check:checked');
+  if (!checks.length) { showToast('Select at least one delivery to remit', 'error'); return; }
+  const total = Array.from(checks).reduce((s,c) => s + parseFloat(c.dataset.amount||0), 0);
+  const ids = Array.from(checks).map(c => c.dataset.id);
+  document.getElementById('remit-modal-amount').textContent = '₦' + total.toLocaleString();
+  document.getElementById('remit-selected-ids').value = JSON.stringify(ids);
+  document.getElementById('remit-mode-label').textContent = `${ids.length} deliver${ids.length > 1 ? 'ies' : 'y'} selected`;
+  document.getElementById('modal-remit').classList.add('open');
 }
 
 // ── MODAL ──
@@ -1754,8 +1810,18 @@ function closeRemitModal() {
 }
 
 function openRemitModal() {
+  // Remit ALL unremitted paid deliveries
+  // Get selected delivery IDs from modal (set by either openRemitModal or openBulkRemitModal)
+  let selectedIds = [];
+  try { selectedIds = JSON.parse(document.getElementById('remit-selected-ids').value || '[]'); } catch(e) {}
+  const toRemit = selectedIds.length
+    ? allDeliveries.filter(d => selectedIds.includes(d.id))
+    : allDeliveries.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
+  const ids = toRemit.map(d => d.id);
   const amount = document.getElementById('sum-remit').textContent;
   document.getElementById('remit-modal-amount').textContent = amount;
+  document.getElementById('remit-selected-ids').value = JSON.stringify(ids);
+  document.getElementById('remit-mode-label').textContent = `${ids.length} deliver${ids.length !== 1 ? 'ies' : 'y'} — Remit All`;
   document.getElementById('modal-remit').classList.add('open');
 }
 
@@ -1810,9 +1876,12 @@ async function confirmRemit() {
   btn.disabled = true;
   btn.textContent = 'Processing...';
 
-  const toRemit = allDeliveries.filter(d =>
-    d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin
-  );
+  // Get selected delivery IDs from modal (set by either openRemitModal or openBulkRemitModal)
+  let selectedIds = [];
+  try { selectedIds = JSON.parse(document.getElementById('remit-selected-ids').value || '[]'); } catch(e) {}
+  const toRemit = selectedIds.length
+    ? allDeliveries.filter(d => selectedIds.includes(d.id))
+    : allDeliveries.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
 
   try {
     // Upload receipt if selected
