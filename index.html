@@ -1518,12 +1518,11 @@ function updateStats() {
   const pending = allDeliveries.filter(d => d.status === 'assigned').length;
   const delivered = allDeliveries.filter(d => ['delivered_payment_made','delivered_awaiting_payment'].includes(d.status)).length;
   const total = allDeliveries.length;
-  // Cash to remit = all awaiting payment orders (money collected but not yet given to admin)
-  // + delivered & paid cash orders not yet remitted
+  // Cash to remit = only orders where cash was physically collected (delivered_payment_made + customer_paid)
+  // but NOT yet remitted to admin. "Awaiting payment" means cash not collected yet — don't count those.
   const toRemit = allDeliveries
-    .filter(d => d.status === 'delivered_awaiting_payment' || 
-                (d.status === 'delivered_payment_made' && d.customer_paid && !d.remitted_to_admin))
-    .reduce((s,d) => s + (parseFloat(d.orders?.total_price || d.amount_collected || 0)), 0);
+    .filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin)
+    .reduce((s,d) => s + parseFloat(d.amount_collected || d.orders?.total_price || 0), 0);
   const paid = allDeliveries.filter(d => d.status === 'delivered_payment_made').length;
   const wait = allDeliveries.filter(d => d.status === 'delivered_awaiting_payment').length;
   const cancelled = allDeliveries.filter(d => d.status === 'cancelled').length;
