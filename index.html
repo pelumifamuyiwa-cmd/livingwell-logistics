@@ -824,8 +824,8 @@ body::before {
 /* ── STOCK ── */
 .stock-card {
   border-radius: var(--r);
-  padding: 18px;
-  margin-bottom: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
   position: relative;
   overflow: hidden;
   border: 1px solid;
@@ -845,8 +845,8 @@ body::before {
   height: 2px;
   background: linear-gradient(90deg, #2563EB, #60A5FA, transparent);
 }
-.stock-name { font-size: 0.95rem; font-weight: 800; margin-bottom: 3px; }
-.stock-meta { font-size: 0.74rem; color: var(--text3); margin-bottom: 14px; }
+.stock-name { font-size: 0.88rem; font-weight: 800; margin-bottom: 2px; }
+.stock-meta { font-size: 0.7rem; color: var(--text3); margin-bottom: 8px; }
 .stock-status {
   display: inline-flex;
   align-items: center;
@@ -863,25 +863,25 @@ body::before {
 .stock-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 .stock-stat {
   background: rgba(255,255,255,0.04);
-  border-radius: 11px;
-  padding: 10px 12px;
+  border-radius: 9px;
+  padding: 7px 10px;
 }
-.stock-stat-lbl { font-size: 0.62rem; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
-.stock-stat-val { font-family: var(--mono); font-size: 1.1rem; font-weight: 700; color: var(--blue2); }
+.stock-stat-lbl { font-size: 0.6rem; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+.stock-stat-val { font-family: var(--mono); font-size: 0.95rem; font-weight: 700; color: var(--blue2); }
 
 .confirm-btn {
   width: 100%;
   background: linear-gradient(135deg, #1e40af, #2563EB);
   color: #fff;
   border: none;
-  border-radius: 14px;
-  padding: 13px;
-  font-size: 0.88rem;
+  border-radius: 11px;
+  padding: 9px;
+  font-size: 0.82rem;
   font-weight: 700;
   font-family: var(--font);
   cursor: pointer;
@@ -890,6 +890,29 @@ body::before {
   transition: opacity 0.15s;
 }
 .confirm-btn:active { opacity: 0.85; }
+
+/* stock search */
+.stock-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+}
+.stock-search-wrap svg { flex-shrink: 0; opacity: 0.45; }
+#stock-search-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  width: 100%;
+}
+#stock-search-input::placeholder { color: var(--text3); }
 
 /* ── PROFILE ── */
 .profile-hero {
@@ -1220,6 +1243,10 @@ body::before {
       <div class="sec-header">
         <div class="sec-title">Stock Inbox</div>
         <div class="sec-sub">Confirm stock received from admin</div>
+      </div>
+      <div class="stock-search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="stock-search-input" type="text" placeholder="Search product..." oninput="filterStock()" />
       </div>
       <div id="stock-inbox-list"><div class="loading-state"><div class="spinner"></div>Loading...</div></div>
     </div>
@@ -1864,6 +1891,14 @@ async function loadStockInbox() {
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load stock</div></div>'; }
+}
+
+function filterStock() {
+  const q = document.getElementById('stock-search-input').value.toLowerCase().trim();
+  document.querySelectorAll('#stock-inbox-list .stock-card').forEach(card => {
+    const name = card.querySelector('.stock-name')?.textContent.toLowerCase() || '';
+    card.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
 }
 
 async function confirmStockReceipt(stockId, qty) {
