@@ -1372,7 +1372,7 @@ body::before {
       <!-- Receipt upload area -->
       <div style="margin-bottom:14px;">
         <div style="font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.4px;">Receipt / Proof of Payment</div>
-        <input type="file" id="remit-receipt-input" accept="image/*" capture="environment" style="display:none;" onchange="onRemitReceiptSelected()">
+        <input type="file" id="remit-receipt-input" accept="image/*" style="display:none;" onchange="onRemitReceiptSelected()">
         <div id="remit-upload-area" onclick="document.getElementById('remit-receipt-input').click()"
           style="border:2px dashed rgba(124,58,237,0.35);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;">
           <div style="font-size:1.4rem;margin-bottom:6px;">📷</div>
@@ -1871,8 +1871,6 @@ async function uploadRemitReceipt(file, partnerId) {
     const compressed = await compressImage(file, 1200, 0.75);
     const fileName = `${partnerId || 'unknown'}_${Date.now()}.jpg`;
     const bucketEncoded = encodeURIComponent(BUCKET);
-    console.log('[UPLOAD] Uploading to bucket:', BUCKET, '-> encoded:', bucketEncoded);
-    console.log('[UPLOAD] Full URL:', `${SB}/storage/v1/object/${bucketEncoded}/${fileName}`);
     const res = await fetch(`${SB}/storage/v1/object/${bucketEncoded}/${fileName}`, {
       method: 'POST',
       headers: {
@@ -1883,16 +1881,13 @@ async function uploadRemitReceipt(file, partnerId) {
       },
       body: compressed
     });
-    console.log('[UPLOAD] Response status:', res.status, res.statusText);
     if (!res.ok) {
       const err = await res.text();
       console.warn('[UPLOAD] FAILED:', err);
       showToast('⚠️ Receipt upload failed — remittance still recorded', 'warning');
       return null;
     }
-    const finalUrl = `${SB}/storage/v1/object/public/${bucketEncoded}/${fileName}`;
-    console.log('[UPLOAD] SUCCESS. URL:', finalUrl);
-    return finalUrl;
+    return `${SB}/storage/v1/object/public/${bucketEncoded}/${fileName}`;
   } catch(e) {
     console.warn('Receipt upload error:', e);
     return null;
@@ -1914,15 +1909,11 @@ async function confirmRemit() {
   try {
     // Upload receipt if selected
     const file = document.getElementById('remit-receipt-input').files[0];
-    console.log('[REMIT] File selected:', file ? file.name + ' (' + file.size + ' bytes)' : 'NO FILE');
-    console.log('[REMIT] Partner ID:', partner?.id);
     const receiptUrl = await uploadRemitReceipt(file, partner?.id);
-    console.log('[REMIT] Receipt URL returned:', receiptUrl);
     const remittedAt = new Date().toISOString();
 
     const patch = { remitted_to_admin: true, remitted_at: remittedAt };
     if (receiptUrl) patch.remittance_receipt_url = receiptUrl;
-    console.log('[REMIT] Patch being saved:', JSON.stringify(patch));
     // Patch all in parallel instead of one by one
     await Promise.all(toRemit.map(d =>
       api(`deliveries?id=eq.${d.id}`, 'PATCH', patch, { Prefer: 'return=minimal' })
