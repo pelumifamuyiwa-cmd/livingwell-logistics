@@ -1914,10 +1914,23 @@ async function confirmRemit() {
 
     const patch = { remitted_to_admin: true, remitted_at: remittedAt };
     if (receiptUrl) patch.remittance_receipt_url = receiptUrl;
-    // Patch all in parallel instead of one by one
-    await Promise.all(toRemit.map(d =>
-      api(`deliveries?id=eq.${d.id}`, 'PATCH', patch, { Prefer: 'return=minimal' })
-    ));
+    // Patch one by one to catch individual failures
+    for (const d of toRemit) {
+      const patchRes = await fetch(`${SB}/rest/v1/deliveries?id=eq.${d.id}`, {
+        method: 'PATCH',
+        headers: { ...H, 'Authorization': `Bearer ${tok()}`, 'Prefer': 'return=representation', 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch)
+      });
+      if (!patchRes.ok) {
+        const errText = await patchRes.text();
+        console.error('Patch failed for delivery', d.id, errText);
+        showToast('Update failed: ' + errText, 'error');
+        return;
+      }
+      // Update in-memory immediately so UI reflects change
+      const idx = allDeliveries.findIndex(x => x.id === d.id);
+      if (idx !== -1) Object.assign(allDeliveries[idx], patch);
+    }
 
     closeRemitModal();
     clearRemitReceipt();
