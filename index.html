@@ -1618,6 +1618,16 @@ function updateStats() {
   else badge.style.display = 'none';
 }
 
+function groupByCustomer(deliveries) {
+  const groups = {};
+  deliveries.forEach(d => {
+    const key = (d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || '');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(d);
+  });
+  return Object.values(groups);
+}
+
 function renderDashboard() {
   const assigned = allDeliveries.filter(d => d.status === 'assigned');
   const el = document.getElementById('dash-assigned-list');
@@ -1625,24 +1635,58 @@ function renderDashboard() {
     el.innerHTML = '<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">All caught up! No pending deliveries.</div></div>';
     return;
   }
-  el.innerHTML = assigned.map(d => assignedCardHTML(d)).join('');
+  const groups = groupByCustomer(assigned);
+  el.innerHTML = groups.map(group => groupedCardHTML(group)).join('');
 }
 
-function assignedCardHTML(d) {
-  const o = d.orders || {};
+function groupedCardHTML(group) {
+  const first = group[0];
+  const o = first.orders || {};
   const name = o.customer_name || '—';
-  const product = o.products?.name || '—';
   const location = o.delivery_location || '—';
   const phone = (o.customer_phone||'').replace(/[^0-9]/g,'').replace(/^0/,'234');
-  const amount = parseFloat(o.total_price||0);
-  const dStr = JSON.stringify(d).replace(/"/g,'&quot;');
+  const totalAmount = group.reduce((s,d) => s + parseFloat(d.orders?.total_price||0), 0);
+  const isMulti = group.length > 1;
+
+  const productLines = group.map(d => {
+    const ord = d.orders || {};
+    const product = ord.products?.name || '—';
+    const qty = ord.quantity || 1;
+    const price = parseFloat(ord.total_price||0);
+    const dStr = JSON.stringify(d).replace(/"/g,'&quot;');
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;background:var(--bg2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div>
+          <div style="font-size:0.82rem;font-weight:700;color:var(--text);">${product}</div>
+          <div style="font-size:0.7rem;color:var(--text3);">Qty: ${qty} &nbsp;·&nbsp; <span class="mono" style="color:var(--purple-light);">₦${price.toLocaleString()}</span></div>
+        </div>
+      </div>
+      <div class="ac-actions" style="margin-top:0;">
+        <button class="ac-btn paid" onclick="quickUpdate(${dStr},'delivered_paid')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Paid
+        </button>
+        <button class="ac-btn await" onclick="quickUpdate(${dStr},'delivered_pending')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Awaiting
+        </button>
+        <button class="ac-btn cancel" onclick="quickUpdate(${dStr},'cancelled')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Cancel
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
   return `<div class="assigned-card">
     <div class="ac-top">
       <div>
         <div class="ac-name">${name}</div>
-        <div class="ac-product">${product}</div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;">${isMulti ? group.length + ' products' : (first.orders?.products?.name||'—')}</div>
       </div>
-      <div class="ac-pulse"></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        ${isMulti ? `<span style="background:var(--purple-dim);color:var(--purple);font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid var(--border2);">${group.length} orders</span>` : '<div class="ac-pulse"></div>'}
+      </div>
     </div>
     <div class="ac-chips">
       <div class="ac-chip">
@@ -1651,28 +1695,15 @@ function assignedCardHTML(d) {
       </div>
       <div class="ac-chip amount">
         <span style="font-weight:800;font-size:0.9rem;">₦</span>
-        ₦${amount.toLocaleString()}
+        ₦${totalAmount.toLocaleString()}${isMulti ? ' total' : ''}
       </div>
       <div class="ac-chip" style="color:var(--text3);font-size:0.7rem;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        ${fmtDateTime(d.assigned_at || d.created_at)}
+        ${fmtDateTime(first.assigned_at || first.created_at)}
       </div>
     </div>
-    <div class="ac-actions">
-      <button class="ac-btn paid" onclick="quickUpdate(${dStr},'delivered_paid')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Paid
-      </button>
-      <button class="ac-btn await" onclick="quickUpdate(${dStr},'delivered_pending')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Awaiting
-      </button>
-      <button class="ac-btn cancel" onclick="quickUpdate(${dStr},'cancelled')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Cancel
-      </button>
-    </div>
-    ${phone ? `<div class="ac-contact">
+    <div style="margin-top:10px;">${productLines}</div>
+    ${phone ? `<div class="ac-contact" style="margin-top:8px;">
       <a href="tel:+${phone}" class="contact-btn call">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.72A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
         Call Customer
@@ -1684,6 +1715,7 @@ function assignedCardHTML(d) {
     </div>` : ''}
   </div>`;
 }
+
 
 // ── DELIVERIES LIST ──
 function filterDeliveries(filter, btn) {
