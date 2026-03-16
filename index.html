@@ -1379,6 +1379,7 @@ body::before {
           <div style="font-size:0.8rem;font-weight:600;color:#a78bfa;">Tap to take photo or upload</div>
           <div style="font-size:0.7rem;color:var(--text3);margin-top:3px;">JPG, PNG supported</div>
         </div>
+        <div style="font-size:0.7rem;color:#DC2626;font-weight:600;margin-top:6px;text-align:center;">Receipt upload is required before submission</div>
         <div id="remit-preview-wrap" style="display:none;position:relative;margin-top:10px;">
           <img id="remit-preview-img" src="" alt="Receipt preview"
             style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.1);">
@@ -1927,6 +1928,19 @@ async function uploadRemitReceipt(file, partnerId) {
 }
 
 async function confirmRemit() {
+  // Block if no receipt uploaded
+  const receiptCheck = document.getElementById('remit-receipt-input').files[0];
+  if (!receiptCheck) {
+    showToast('Please upload a receipt photo before submitting', 'error');
+    document.getElementById('remit-upload-area').style.border = '2px solid #DC2626';
+    document.getElementById('remit-upload-area').style.background = 'rgba(220,38,38,0.08)';
+    setTimeout(() => {
+      document.getElementById('remit-upload-area').style.border = '2px dashed rgba(124,58,237,0.3)';
+      document.getElementById('remit-upload-area').style.background = 'rgba(124,58,237,0.05)';
+    }, 2500);
+    return;
+  }
+
   const btn = document.getElementById('remit-confirm-btn');
   btn.disabled = true;
   btn.textContent = 'Processing...';
