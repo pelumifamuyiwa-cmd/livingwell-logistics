@@ -1856,6 +1856,8 @@ function openRemitModal() {
   document.getElementById('remit-selected-ids').value = JSON.stringify(ids);
   document.getElementById('remit-mode-label').textContent = `${ids.length} deliver${ids.length !== 1 ? 'ies' : 'y'} — Remit All`;
   document.getElementById('modal-remit').classList.add('open');
+  // Initialize button as disabled until receipt is uploaded
+  updateRemitButtonState();
 }
 
 function onRemitReceiptSelected() {
@@ -1866,14 +1868,32 @@ function onRemitReceiptSelected() {
     document.getElementById('remit-preview-img').src = e.target.result;
     document.getElementById('remit-preview-wrap').style.display = 'block';
     document.getElementById('remit-upload-area').style.display = 'none';
+    // Enable remit button when receipt is selected
+    updateRemitButtonState();
   };
   reader.readAsDataURL(file);
+}
+
+function updateRemitButtonState() {
+  const hasReceipt = document.getElementById('remit-receipt-input').files[0];
+  const btn = document.getElementById('remit-confirm-btn');
+  if (hasReceipt) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  }
 }
 
 function clearRemitReceipt() {
   document.getElementById('remit-receipt-input').value = '';
   document.getElementById('remit-preview-wrap').style.display = 'none';
   document.getElementById('remit-upload-area').style.display = 'block';
+  // Disable button when receipt is cleared
+  updateRemitButtonState();
 }
 
 async function compressImage(file, maxW, quality) {
@@ -1928,22 +1948,37 @@ async function uploadRemitReceipt(file, partnerId) {
 }
 
 async function confirmRemit() {
-  // Block if no receipt uploaded
+  // STRICT: Block if no receipt uploaded
   const receiptCheck = document.getElementById('remit-receipt-input').files[0];
   if (!receiptCheck) {
-    showToast('Please upload a receipt photo before submitting', 'error');
-    document.getElementById('remit-upload-area').style.border = '2px solid #DC2626';
-    document.getElementById('remit-upload-area').style.background = 'rgba(220,38,38,0.08)';
+    showToast('⚠️ Receipt photo is REQUIRED before remitting cash', 'error');
+    document.getElementById('remit-upload-area').style.border = '3px solid #DC2626';
+    document.getElementById('remit-upload-area').style.background = 'rgba(220,38,38,0.12)';
+    document.getElementById('remit-upload-area').style.boxShadow = '0 0 0 2px rgba(220,38,38,0.3)';
     setTimeout(() => {
       document.getElementById('remit-upload-area').style.border = '2px dashed rgba(124,58,237,0.3)';
       document.getElementById('remit-upload-area').style.background = 'rgba(124,58,237,0.05)';
-    }, 2500);
+      document.getElementById('remit-upload-area').style.boxShadow = 'none';
+    }, 3000);
+    return;
+  }
+
+  // Validate file is an image
+  if (!receiptCheck.type.startsWith('image/')) {
+    showToast('❌ Receipt must be an image file (PNG, JPG, etc.)', 'error');
+    return;
+  }
+
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024;
+  if (receiptCheck.size > maxSize) {
+    showToast('❌ Receipt image is too large (max 10MB)', 'error');
     return;
   }
 
   const btn = document.getElementById('remit-confirm-btn');
   btn.disabled = true;
-  btn.textContent = 'Processing...';
+  btn.textContent = 'Uploading receipt...';
 
   // Get selected delivery IDs from modal (set by either openRemitModal or openBulkRemitModal)
   let selectedIds = [];
@@ -1953,13 +1988,26 @@ async function confirmRemit() {
     : allDeliveries.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
 
   try {
-    // Upload receipt if selected
+    // Upload receipt - REQUIRED step
     const file = document.getElementById('remit-receipt-input').files[0];
     const receiptUrl = await uploadRemitReceipt(file, partner?.id);
-    const remittedAt = new Date().toISOString();
+    
+    if (!receiptUrl) {
+      showToast('❌ Failed to upload receipt. Please try again.', 'error');
+      btn.disabled = false;
+      btn.textContent = '✅ Yes, I have remitted the cash';
+      return;
+    }
 
-    const patch = { remitted_to_admin: true, remitted_at: remittedAt };
-    if (receiptUrl) patch.remittance_receipt_url = receiptUrl;
+    const remittedAt = new Date().toISOString();
+    const patch = { 
+      remitted_to_admin: true, 
+      remitted_at: remittedAt,
+      remittance_receipt_url: receiptUrl  // ALWAYS include receipt URL
+    };
+    
+    btn.textContent = 'Recording remittance...';
+    
     // Patch one by one to catch individual failures
     for (const d of toRemit) {
       const patchRes = await fetch(`${SB}/rest/v1/deliveries?id=eq.${d.id}`, {
@@ -1980,7 +2028,7 @@ async function confirmRemit() {
 
     closeRemitModal();
     clearRemitReceipt();
-    showToast('✅ Cash remittance recorded!', 'success');
+    showToast('✅ Cash remittance recorded with receipt!', 'success');
     await loadDeliveries();
   } catch(e) {
     showToast('Failed: ' + e.message, 'error');
