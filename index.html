@@ -690,39 +690,72 @@ body::before {
 /* ── DELIVERY CARD ── */
 .delivery-card {
   background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 16px 18px;
-  margin-bottom: 10px;
-  transition: border-color 0.2s;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 16px 16px 20px;
+  margin-bottom: 14px;
+  transition: all 0.2s;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
 }
-.delivery-card:active { background: var(--bg4); }
+.delivery-card:active { background: var(--bg4); transform: scale(0.99); }
+
+/* Left accent strip per status */
+.delivery-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  border-radius: 16px 0 0 16px;
+  background: var(--border);
+}
+.delivery-card.status-assigned::before { background: var(--amber); }
+.delivery-card.status-delivered::before { background: var(--green); }
+.delivery-card.status-awaiting::before { background: #FB923C; }
+.delivery-card.status-cancelled::before { background: var(--red); }
+.delivery-card.status-remitted::before { background: #60A5FA; }
 
 .dc-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 12px;
+  gap: 8px;
 }
-.dc-name { font-size: 0.92rem; font-weight: 700; margin-bottom: 2px; }
-.dc-product { font-size: 0.74rem; color: var(--text3); }
+.dc-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+.dc-product {
+  font-size: 0.74rem;
+  color: var(--text3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
 
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: 20px;
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .b-assigned { background: var(--amber-dim); color: var(--amber); }
 .b-delivered { background: var(--green-dim); color: var(--green); }
-.b-awaiting { background: rgba(251,146,60,0.12); color: var(--orange); }
+.b-awaiting { background: rgba(251,146,60,0.12); color: #FB923C; }
 .b-cancelled { background: var(--red-dim); color: var(--red); }
 
 .dc-meta {
@@ -734,6 +767,7 @@ body::before {
   background: var(--bg4);
   border-radius: 10px;
   padding: 9px 11px;
+  overflow: hidden;
 }
 .dc-meta-lbl {
   font-size: 0.6rem;
@@ -749,6 +783,9 @@ body::before {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+  display: block;
+  word-break: break-word;
 }
 .dc-meta-val.mono { font-family: var(--mono); font-size: 0.78rem; color: var(--blue2); }
 
@@ -1756,7 +1793,12 @@ function renderDeliveries() {
     const isPending = d.status === 'assigned' || d.status === 'in_transit';
     const isRemittable = d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin;
     const isRemitted = d.remitted_to_admin === true;
-    return `<div class="delivery-card" id="dcard-${d.id}">
+    const statusClass = isRemitted ? 'status-remitted' : 
+      d.status === 'assigned' || d.status === 'in_transit' ? 'status-assigned' :
+      d.status === 'delivered_payment_made' ? 'status-delivered' :
+      d.status === 'delivered_awaiting_payment' ? 'status-awaiting' :
+      d.status === 'cancelled' ? 'status-cancelled' : '';
+    return `<div class="delivery-card ${statusClass}" id="dcard-${d.id}">
       <div class="dc-top">
         <div style="display:flex;align-items:center;gap:10px;flex:1;">
           ${isRemittable ? `<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||o.total_price||0)}"
