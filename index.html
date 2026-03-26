@@ -1833,14 +1833,16 @@ function renderDeliveries() {
 
 
 async function cancelRemittance(deliveryId) {
-  if (!confirm('Are you sure you want to revert this remittance? The payment status will return to pending and admin will be notified.')) return;
+  if (!confirm('Are you sure you want to revert this remittance? The payment status will return to pending, stock will be restored, and the payment record will be removed.')) return;
   try {
-    // Find the delivery to get the linked order ID
+    // Find the delivery to get the linked order and product info
     const delivery = allDeliveries.find(d => d.id === deliveryId);
     if (!delivery) { showToast('Delivery not found', 'error'); return; }
-    const orderId = delivery.order_id || delivery.orders?.id;
+    const orderId   = delivery.order_id || delivery.orders?.id;
+    const productId = delivery.orders?.products?.id;
+    const qty       = delivery.orders?.quantity || 1;
 
-    // 1. Revert delivery — unmark remitted, reset payment status back to awaiting
+    // 1. Revert delivery — unmark remitted, clear payment flags, mark cancelled
     const deliveryPatch = {
       remitted_to_admin: false,
       remitted_at: null,
@@ -1856,22 +1858,78 @@ async function cancelRemittance(deliveryId) {
       headers: { ...H, 'Authorization': 'Bearer ' + tok(), 'Prefer': 'return=representation', 'Content-Type': 'application/json' },
       body: JSON.stringify(deliveryPatch)
     });
-    if (!res.ok) { showToast('Failed to revert remittance', 'error'); return; }
+    if (!res.ok) { showToast('Failed to revert delivery record', 'error'); return; }
 
-    // 2. Revert the linked order status back to assigned
+    // 2. Revert the linked order status back to awaiting payment
+    //    (order was delivered, just payment was erroneous — keep it as awaiting, not assigned)
     if (orderId) {
       await fetch(SB + '/rest/v1/orders?id=eq.' + orderId, {
         method: 'PATCH',
         headers: { ...H, 'Authorization': 'Bearer ' + tok(), 'Prefer': 'return=minimal', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'assigned' })
+        body: JSON.stringify({ status: 'delivered_awaiting_payment' })
       });
     }
 
-    // 3. Update in-memory
+    // 3. Delete the erroneous payment record so admin's revenue balance is corrected
+    //    Match on order_id — delete the payment row that was created by the mistaken paid click
+    if (orderId) {
+      try {
+        await fetch(SB + '/rest/v1/payments?order_id=eq.' + orderId, {
+          method: 'DELETE',
+          headers: { ...H, 'Authorization': 'Bearer ' + tok(), 'Prefer': 'return=minimal' }
+        });
+      } catch(e) {
+        // Non-fatal — log but continue
+        console.warn('Could not delete payment record:', e.message);
+      }
+    }
+
+    // 4. Restore stock — put the qty back since delivery is now un-paid / un-remitted
+    //    This reverses the deductStock() that happened when logistics originally clicked "Delivered & Paid"
+    if (productId && qty) {
+      try {
+        // 4a. Restore admin main stock table
+        const stocks = await api(`stock?product_id=eq.${productId}&select=*`);
+        if (stocks?.length) {
+          const restored = (parseInt(stocks[0].quantity) || 0) + qty;
+          await api(`stock?product_id=eq.${productId}`, 'PATCH',
+            { quantity: restored, updated_at: new Date().toISOString() },
+            { Prefer: 'return=minimal' }
+          );
+        }
+        // 4b. Restore this partner's logistics_stock quantity_remaining
+        //     Add back to the most recently deducted batch (latest sent_at with confirmed=true)
+        const lsRows = await api(
+          `logistics_stock?product_id=eq.${productId}&logistics_partner_id=eq.${partner.id}&confirmed=eq.true&select=*&order=sent_at.desc`
+        ) || [];
+        if (lsRows.length) {
+          // Restore to the most recent batch first (mirrors LIFO restoration)
+          let toRestore = qty;
+          for (const row of lsRows) {
+            if (toRestore <= 0) break;
+            const maxCanRestore = (row.quantity_confirmed || 0) - (row.quantity_remaining || 0);
+            const restoreAmt = Math.min(toRestore, maxCanRestore);
+            if (restoreAmt > 0) {
+              await api(`logistics_stock?id=eq.${row.id}`, 'PATCH',
+                { quantity_remaining: (row.quantity_remaining || 0) + restoreAmt },
+                { Prefer: 'return=minimal' }
+              );
+              toRestore -= restoreAmt;
+            }
+          }
+        }
+      } catch(stockErr) {
+        // Non-fatal — stock restore failed, log it
+        console.warn('Stock restore error:', stockErr.message);
+        showToast('⚠️ Remittance reverted but stock restore failed — contact admin', 'info');
+      }
+    }
+
+    // 5. Update in-memory so UI reflects instantly
     const idx = allDeliveries.findIndex(x => x.id === deliveryId);
     if (idx !== -1) Object.assign(allDeliveries[idx], deliveryPatch);
 
-    showToast('Remittance reverted successfully. Admin has been notified.', 'success');
+    showToast('✅ Remittance reverted. Stock restored & payment removed. Admin has been notified.', 'success');
     await loadDeliveries();
   } catch(e) { showToast('Failed: ' + e.message, 'error'); }
 }
