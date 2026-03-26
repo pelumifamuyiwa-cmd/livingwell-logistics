@@ -1809,8 +1809,10 @@ function renderDeliveries() {
             <div class="dc-product">${o.products?.name||'—'}</div>
           </div>
         </div>
-        <span class="badge ${statusClasses[d.status]||'b-assigned'}">${isRemitted ? '✓ Remitted' : (statusLabels[d.status]||d.status)}</span>
-        ${(d.status === 'delivered_payment_made' && !isRemitted) ? `<button onclick="revertDeliveredPaid('${d.id}')" style="font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #F59E0B;background:rgba(245,158,11,0.1);color:#F59E0B;cursor:pointer;margin-left:4px;">↩ Undo Paid</button>` : ''}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+          <span class="badge ${statusClasses[d.status]||'b-assigned'}">${isRemitted ? '✓ Remitted' : (statusLabels[d.status]||d.status)}</span>
+          ${(d.status === 'delivered_payment_made' && !isRemitted) ? `<button onclick="revertDeliveredPaid('${d.id}')" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #F59E0B;background:rgba(245,158,11,0.1);color:#F59E0B;cursor:pointer;white-space:nowrap;">↩ Undo Paid</button>` : ''}
+        </div>
       </div>
       <div class="dc-meta">
         <div class="dc-meta-item"><div class="dc-meta-lbl">Location</div><div class="dc-meta-val">${o.delivery_location||'—'}</div></div>
