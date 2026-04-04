@@ -1614,7 +1614,7 @@ async function loadDeliveries() {
     '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
   try {
     // Use the same query as the original — filter client-side to avoid RLS issues
-    const raw = await api(`deliveries?select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc`) || [];
+    const raw = await api(`deliveries?select=*,batch_id,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc`) || [];
     // Client-side filter: only show THIS partner's deliveries
     allDeliveries = raw.filter(d => d.logistics_partner_id === partner.id);
     updateStats();
@@ -1658,8 +1658,12 @@ function updateStats() {
 
 function groupByCustomer(deliveries) {
   const groups = {};
+  const seenBatch = new Set();
   deliveries.forEach(d => {
-    const key = (d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || '');
+    // Prefer batch_id grouping if available, fall back to customer+location
+    const key = d.batch_id || ((d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || ''));
+    if (d.batch_id && seenBatch.has(d.batch_id)) return;
+    if (d.batch_id) seenBatch.add(d.batch_id);
     if (!groups[key]) groups[key] = [];
     groups[key].push(d);
   });
@@ -1767,69 +1771,125 @@ function renderDeliveries() {
   const el = document.getElementById('deliveries-list');
   if (!el) return;
   let list = currentFilter === 'all' ? allDeliveries : allDeliveries.filter(d => d.status === currentFilter);
-  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No deliveries found</div></div>'; return; }
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128230;</div><div class="empty-text">No deliveries found</div></div>'; return; }
 
   const statusLabels = { assigned:'Pending', in_transit:'In Transit', delivered_payment_made:'Delivered & Paid', delivered_awaiting_payment:'Awaiting Pay', cancelled:'Cancelled', failed:'Cancelled' };
   const statusClasses = { assigned:'b-assigned', in_transit:'b-assigned', delivered_payment_made:'b-delivered', delivered_awaiting_payment:'b-awaiting', cancelled:'b-cancelled', failed:'b-cancelled' };
 
-  // Check if any deliveries are remittable
-  const remittable = list.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
+  // ── Group by batch_id so same-customer multi-product orders appear as one tile ──
+  const groups = [];
+  const seenBatches = new Set();
+  list.forEach(d => {
+    if (d.batch_id && seenBatches.has(d.batch_id)) return;
+    if (d.batch_id) {
+      seenBatches.add(d.batch_id);
+      groups.push({ isBatch: true, id: d.batch_id, items: list.filter(x => x.batch_id === d.batch_id) });
+    } else {
+      groups.push({ isBatch: false, id: d.id, items: [d] });
+    }
+  });
 
+  const remittable = list.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
   const bulkBar = remittable.length > 0 ? `
     <div id="bulk-remit-bar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#7C3AED,#9f61f7);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <div>
         <div style="font-size:0.8rem;font-weight:700;color:#fff;" id="bulk-selected-label">0 selected</div>
-        <div style="font-size:0.7rem;color:rgba(255,255,255,0.75);" id="bulk-selected-amount">₦0 to remit</div>
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.75);" id="bulk-selected-amount">&#8358;0 to remit</div>
       </div>
       <div style="display:flex;gap:8px;">
         <button onclick="selectAllRemittable()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:7px 12px;font-size:0.72rem;font-weight:600;cursor:pointer;">Select All</button>
-        <button onclick="openBulkRemitModal()" style="background:#fff;border:none;color:#7C3AED;border-radius:8px;padding:7px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;">Remit Selected →</button>
+        <button onclick="openBulkRemitModal()" style="background:#fff;border:none;color:#7C3AED;border-radius:8px;padding:7px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;">Remit Selected</button>
       </div>
     </div>` : '';
 
-  el.innerHTML = bulkBar + list.map(d => {
-    const o = d.orders || {};
+  function buildGroupCard(group) {
+    const items = group.items;
+    const first = items[0];
+    const o = first.orders || {};
+    const isBatch = group.isBatch && items.length > 1;
     const phone = (o.customer_phone||'').replace(/[^0-9]/g,'').replace(/^0/,'234');
-    const isPending = d.status === 'assigned' || d.status === 'in_transit';
-    const isRemittable = d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin;
-    const isRemitted = d.remitted_to_admin === true;
-    const statusClass = isRemitted ? 'status-remitted' : 
-      d.status === 'assigned' || d.status === 'in_transit' ? 'status-assigned' :
-      d.status === 'delivered_payment_made' ? 'status-delivered' :
-      d.status === 'delivered_awaiting_payment' ? 'status-awaiting' :
-      d.status === 'cancelled' ? 'status-cancelled' : '';
-    return `<div class="delivery-card ${statusClass}" id="dcard-${d.id}">
+    const batchTotal = items.reduce((s,d) => s + parseFloat(d.orders?.total_price||0), 0);
+    const anyPending = items.some(d => d.status==='assigned'||d.status==='in_transit');
+    const allRemitted = items.every(d => d.remitted_to_admin===true);
+    const cardStatusClass = allRemitted ? 'status-remitted' :
+      anyPending ? 'status-assigned' :
+      items.some(d=>d.status==='delivered_awaiting_payment') ? 'status-awaiting' :
+      items[0].status==='delivered_payment_made' ? 'status-delivered' :
+      items[0].status==='cancelled' ? 'status-cancelled' : '';
+
+    const batchHeader = isBatch ? `
+      <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,0.12);border:1px solid rgba(99,179,237,0.25);border-radius:20px;padding:3px 10px;margin-bottom:10px;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <span style="font-size:0.65rem;font-weight:700;color:var(--blue3);">${items.length} ITEMS &middot; BATCH ORDER</span>
+      </div>` : '';
+
+    const itemRows = isBatch ? `
+      <div style="margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+        ${items.map((d,i) => {
+          const od = d.orders||{};
+          const dPending = d.status==='assigned'||d.status==='in_transit';
+          const dRemittable = d.status==='delivered_payment_made'&&d.customer_paid===true&&!d.remitted_to_admin;
+          const dRemitted = d.remitted_to_admin===true;
+          const dAwaiting = d.status==='delivered_awaiting_payment';
+          const dColor = dRemitted?'var(--blue2)':d.status==='delivered_payment_made'?'var(--green)':dAwaiting?'var(--amber)':d.status==='cancelled'?'var(--red)':'var(--text2)';
+          const safeC = (od.customer_name||'').replace(/'/g,"\\'");
+          return `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${i%2===0?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)'};${i<items.length-1?'border-bottom:1px solid var(--border);':''}">
+            ${dRemittable?`<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||od.total_price||0)}" style="width:16px;height:16px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();updateBulkBar()">`:
+              `<span style="font-size:0.65rem;font-weight:800;color:var(--text3);width:16px;text-align:center;flex-shrink:0;">${i+1}</span>`}
+            <span style="font-size:0.8rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${od.products?.name||'--'}</span>
+            <span style="font-size:0.72rem;font-family:var(--mono);color:var(--green);flex-shrink:0;">&#8358;${parseFloat(od.total_price||0).toLocaleString()}</span>
+            <span style="font-size:0.6rem;font-weight:700;color:${dColor};flex-shrink:0;">${dRemitted?'Done':(statusLabels[d.status]||d.status)}</span>
+            ${dPending?`<button onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid rgba(99,179,237,0.3);background:var(--blue-dim);color:var(--blue2);cursor:pointer;white-space:nowrap;flex-shrink:0;">Update</button>`:''}
+            ${dAwaiting?`<button onclick="markPaymentReceived('${d.id}','${od.id||''}','${safeC}',${parseFloat(od.total_price||0)})" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--green);background:var(--green-dim);color:var(--green);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#128176; Paid</button>`:''}
+            ${(d.status==='delivered_payment_made'&&!dRemitted)?`<button onclick="revertDeliveredPaid('${d.id}')" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--amber);background:var(--amber-dim);color:var(--amber);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#8617; Undo</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>` : '';
+
+    const singleCheck = !isBatch ? (() => {
+      const d = items[0]; const od = d.orders||{};
+      const isR = d.status==='delivered_payment_made'&&d.customer_paid===true&&!d.remitted_to_admin;
+      return isR ? `<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||od.total_price||0)}" style="width:18px;height:18px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();updateBulkBar()">` : '';
+    })() : '';
+
+    const safeFirst = (o.customer_name||'').replace(/'/g,"\\'");
+
+    return `<div class="delivery-card ${cardStatusClass}" id="dcard-${group.id}" style="margin-bottom:14px;">
+      ${batchHeader}
       <div class="dc-top">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;">
-          ${isRemittable ? `<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||o.total_price||0)}"
-            style="width:18px;height:18px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;"
-            onclick="event.stopPropagation();updateBulkBar()">` : ''}
-          <div>
-            <div class="dc-name">${o.customer_name||'—'}</div>
-            <div class="dc-product">${o.products?.name||'—'}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          ${singleCheck}
+          <div style="flex:1;min-width:0;">
+            <div class="dc-name">${o.customer_name||'--'}</div>
+            <div class="dc-product">${isBatch?items.length+' products ordered':o.products?.name||'--'}</div>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
-          <span class="badge ${statusClasses[d.status]||'b-assigned'}">${isRemitted ? '✓ Remitted' : (statusLabels[d.status]||d.status)}</span>
-          ${(d.status === 'delivered_payment_made' && !isRemitted) ? `<button onclick="revertDeliveredPaid('${d.id}')" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #F59E0B;background:rgba(245,158,11,0.1);color:#F59E0B;cursor:pointer;white-space:nowrap;">↩ Undo Paid</button>` : ''}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+          <span class="badge ${allRemitted?'b-delivered':statusClasses[first.status]||'b-assigned'}">${allRemitted?'All Done':(statusLabels[first.status]||first.status)}</span>
+          ${!isBatch&&first.status==='delivered_payment_made'&&!first.remitted_to_admin?`<button onclick="revertDeliveredPaid('${first.id}')" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #F59E0B;background:rgba(245,158,11,0.1);color:#F59E0B;cursor:pointer;white-space:nowrap;">&#8617; Undo Paid</button>`:''}
         </div>
       </div>
+      ${itemRows}
       <div class="dc-meta">
-        <div class="dc-meta-item"><div class="dc-meta-lbl">Location</div><div class="dc-meta-val">${o.delivery_location||'—'}</div></div>
-        <div class="dc-meta-item"><div class="dc-meta-lbl">Amount</div><div class="dc-meta-val mono">₦${parseFloat(o.total_price||0).toLocaleString()}</div></div>
+        <div class="dc-meta-item"><div class="dc-meta-lbl">Location</div><div class="dc-meta-val">${o.delivery_location||'--'}</div></div>
+        <div class="dc-meta-item">
+          <div class="dc-meta-lbl">${isBatch?'Batch Total':'Amount'}</div>
+          <div class="dc-meta-val mono" style="color:var(--green);">&#8358;${(isBatch?batchTotal:parseFloat(first.orders?.total_price||0)).toLocaleString()}</div>
+        </div>
       </div>
-      ${isPending ? `<button class="update-btn" onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">Update Status →</button>` : ''}
-      ${d.status === 'delivered_awaiting_payment' ? `
-        <button class="update-btn" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:8px;" onclick="markPaymentReceived('${d.id}','${d.orders?.id||''}','${(o.customer_name||'').replace(/'/g,"\'")}',${parseFloat(o.total_price||0)})">
-          💰 Mark Payment Received
-        </button>` : ''}
-      ${phone && isPending ? `<div style="display:flex;gap:8px;margin-top:8px;">
-        <a href="tel:+${phone}" class="contact-btn call" style="flex:1;text-decoration:none;">📞 Call</a>
-        <a href="https://wa.me/${phone}" target="_blank" class="contact-btn wa" style="flex:1;text-decoration:none;">💬 WhatsApp</a>
-      </div>` : ''}
+      ${!isBatch&&anyPending?`<button class="update-btn" onclick="openUpdateModal(${JSON.stringify(first).replace(/"/g,'&quot;')})">Update Status &#8594;</button>`:''}
+      ${!isBatch&&first.status==='delivered_awaiting_payment'?`
+        <button class="update-btn" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:8px;" onclick="markPaymentReceived('${first.id}','${first.orders?.id||''}','${safeFirst}',${parseFloat(o.total_price||0)})">
+          &#128176; Mark Payment Received
+        </button>`:''}
+      ${phone&&anyPending?`<div style="display:flex;gap:8px;margin-top:10px;">
+        <a href="tel:+${phone}" class="contact-btn call" style="flex:1;text-decoration:none;">&#128222; Call</a>
+        <a href="https://wa.me/${phone}" target="_blank" class="contact-btn wa" style="flex:1;text-decoration:none;">&#128172; WhatsApp</a>
+      </div>`:''}
     </div>`;
-  }).join('');
+  }
 
+  el.innerHTML = bulkBar + groups.map(buildGroupCard).join('');
   updateBulkBar();
 }
 
