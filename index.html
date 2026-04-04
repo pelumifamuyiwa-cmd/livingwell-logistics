@@ -1614,7 +1614,7 @@ async function loadDeliveries() {
     '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
   try {
     // Use the same query as the original — filter client-side to avoid RLS issues
-    const raw = await api(`deliveries?select=*,batch_id,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc`) || [];
+    const raw = await api(`deliveries?select=*,orders(id,customer_name,total_price,delivery_location,customer_phone,quantity,products(id,name))&order=assigned_at.desc`) || [];
     // Client-side filter: only show THIS partner's deliveries
     allDeliveries = raw.filter(d => d.logistics_partner_id === partner.id);
     updateStats();
@@ -1658,12 +1658,8 @@ function updateStats() {
 
 function groupByCustomer(deliveries) {
   const groups = {};
-  const seenBatch = new Set();
   deliveries.forEach(d => {
-    // Prefer batch_id grouping if available, fall back to customer+location
-    const key = d.batch_id || ((d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || ''));
-    if (d.batch_id && seenBatch.has(d.batch_id)) return;
-    if (d.batch_id) seenBatch.add(d.batch_id);
+    const key = (d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || '');
     if (!groups[key]) groups[key] = [];
     groups[key].push(d);
   });
@@ -1776,17 +1772,15 @@ function renderDeliveries() {
   const statusLabels = { assigned:'Pending', in_transit:'In Transit', delivered_payment_made:'Delivered & Paid', delivered_awaiting_payment:'Awaiting Pay', cancelled:'Cancelled', failed:'Cancelled' };
   const statusClasses = { assigned:'b-assigned', in_transit:'b-assigned', delivered_payment_made:'b-delivered', delivered_awaiting_payment:'b-awaiting', cancelled:'b-cancelled', failed:'b-cancelled' };
 
-  // ── Group by batch_id so same-customer multi-product orders appear as one tile ──
+  // ── Group by customer+location so same-customer multi-product orders appear as one tile ──
   const groups = [];
-  const seenBatches = new Set();
+  const seenKeys = new Set();
   list.forEach(d => {
-    if (d.batch_id && seenBatches.has(d.batch_id)) return;
-    if (d.batch_id) {
-      seenBatches.add(d.batch_id);
-      groups.push({ isBatch: true, id: d.batch_id, items: list.filter(x => x.batch_id === d.batch_id) });
-    } else {
-      groups.push({ isBatch: false, id: d.id, items: [d] });
-    }
+    const key = (d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || '');
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+    const items = list.filter(x => (x.orders?.customer_name || 'unknown') + '|' + (x.orders?.delivery_location || '') === key);
+    groups.push({ isBatch: items.length > 1, id: d.id, items });
   });
 
   const remittable = list.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
