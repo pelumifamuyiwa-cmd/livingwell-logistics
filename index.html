@@ -1659,7 +1659,7 @@ function updateStats() {
 function groupByCustomer(deliveries) {
   const groups = {};
   deliveries.forEach(d => {
-    const key = (d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || '');
+    const key = (d.orders?.customer_name || 'unknown').toLowerCase().trim() + '|' + (d.orders?.delivery_location || '').toLowerCase().trim();
     if (!groups[key]) groups[key] = [];
     groups[key].push(d);
   });
@@ -1772,16 +1772,14 @@ function renderDeliveries() {
   const statusLabels = { assigned:'Pending', in_transit:'In Transit', delivered_payment_made:'Delivered & Paid', delivered_awaiting_payment:'Awaiting Pay', cancelled:'Cancelled', failed:'Cancelled' };
   const statusClasses = { assigned:'b-assigned', in_transit:'b-assigned', delivered_payment_made:'b-delivered', delivered_awaiting_payment:'b-awaiting', cancelled:'b-cancelled', failed:'b-cancelled' };
 
-  // ── Group by customer+location so same-customer multi-product orders appear as one tile ──
-  const groups = [];
-  const seenKeys = new Set();
+  // Group by customer+location
+  const groupMap = {};
   list.forEach(d => {
-    const key = (d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || '');
-    if (seenKeys.has(key)) return;
-    seenKeys.add(key);
-    const items = list.filter(x => (x.orders?.customer_name || 'unknown') + '|' + (x.orders?.delivery_location || '') === key);
-    groups.push({ isBatch: items.length > 1, id: d.id, items });
+    const key = (d.orders?.customer_name || 'unknown').toLowerCase().trim() + '|' + (d.orders?.delivery_location || '').toLowerCase().trim();
+    if (!groupMap[key]) groupMap[key] = [];
+    groupMap[key].push(d);
   });
+  const groups = Object.values(groupMap);
 
   const remittable = list.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
   const bulkBar = remittable.length > 0 ? `
@@ -1796,84 +1794,91 @@ function renderDeliveries() {
       </div>
     </div>` : '';
 
-  function buildGroupCard(group) {
-    const items = group.items;
-    const first = items[0];
+  function buildGroupCard(groupItems) {
+    const first = groupItems[0];
     const o = first.orders || {};
-    const isBatch = group.isBatch && items.length > 1;
+    const isMulti = groupItems.length > 1;
     const phone = (o.customer_phone||'').replace(/[^0-9]/g,'').replace(/^0/,'234');
-    const batchTotal = items.reduce((s,d) => s + parseFloat(d.orders?.total_price||0), 0);
-    const anyPending = items.some(d => d.status==='assigned'||d.status==='in_transit');
-    const allRemitted = items.every(d => d.remitted_to_admin===true);
-    const cardStatusClass = allRemitted ? 'status-remitted' :
-      anyPending ? 'status-assigned' :
-      items.some(d=>d.status==='delivered_awaiting_payment') ? 'status-awaiting' :
-      items[0].status==='delivered_payment_made' ? 'status-delivered' :
-      items[0].status==='cancelled' ? 'status-cancelled' : '';
+    const groupTotal = groupItems.reduce((s,d) => s + parseFloat(d.orders?.total_price||0), 0);
+    const anyPending = groupItems.some(d => d.status==='assigned'||d.status==='in_transit');
+    const allRemitted = groupItems.every(d => d.remitted_to_admin===true);
+    const overallStatus = allRemitted ? 'remitted' :
+      anyPending ? 'assigned' :
+      groupItems.some(d=>d.status==='delivered_awaiting_payment') ? 'awaiting' :
+      groupItems.every(d=>d.status==='delivered_payment_made') ? 'delivered' :
+      groupItems[0].status === 'cancelled' ? 'cancelled' : 'assigned';
+    const cardClass = `status-${overallStatus}`;
 
-    const batchHeader = isBatch ? `
-      <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,0.12);border:1px solid rgba(99,179,237,0.25);border-radius:20px;padding:3px 10px;margin-bottom:10px;">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-        <span style="font-size:0.65rem;font-weight:700;color:var(--blue3);">${items.length} ITEMS &middot; BATCH ORDER</span>
+    // All pending items — for Mark All button
+    const pendingItems = groupItems.filter(d => d.status==='assigned'||d.status==='in_transit');
+    const awaitingItems = groupItems.filter(d => d.status==='delivered_awaiting_payment');
+
+    const markAllSection = (pendingItems.length > 1) ? `
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <button onclick="markAllInGroup(${JSON.stringify(groupItems.map(d=>d.id)).replace(/"/g,'&quot;')}, 'delivered_paid')"
+          style="flex:1;min-width:120px;padding:8px;border:none;border-radius:10px;background:var(--green-dim);color:var(--green);font-size:0.75rem;font-weight:700;cursor:pointer;font-family:var(--font);">
+          ✅ Mark All Delivered & Paid
+        </button>
+        <button onclick="markAllInGroup(${JSON.stringify(groupItems.map(d=>d.id)).replace(/"/g,'&quot;')}, 'delivered_pending')"
+          style="flex:1;min-width:120px;padding:8px;border:none;border-radius:10px;background:var(--amber-dim);color:var(--amber);font-size:0.75rem;font-weight:700;cursor:pointer;font-family:var(--font);">
+          ⏳ Mark All Awaiting
+        </button>
       </div>` : '';
 
-    const itemRows = isBatch ? `
-      <div style="margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border);">
-        ${items.map((d,i) => {
-          const od = d.orders||{};
+    const itemRows = `
+      <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);margin-bottom:10px;">
+        ${groupItems.map((d, i) => {
+          const od = d.orders || {};
           const dPending = d.status==='assigned'||d.status==='in_transit';
           const dRemittable = d.status==='delivered_payment_made'&&d.customer_paid===true&&!d.remitted_to_admin;
           const dRemitted = d.remitted_to_admin===true;
           const dAwaiting = d.status==='delivered_awaiting_payment';
           const dColor = dRemitted?'var(--blue2)':d.status==='delivered_payment_made'?'var(--green)':dAwaiting?'var(--amber)':d.status==='cancelled'?'var(--red)':'var(--text2)';
           const safeC = (od.customer_name||'').replace(/'/g,"\\'");
-          return `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${i%2===0?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)'};${i<items.length-1?'border-bottom:1px solid var(--border);':''}">
+          return `<div style="display:flex;align-items:center;gap:8px;padding:11px 13px;background:${i%2===0?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)'};${i<groupItems.length-1?'border-bottom:1px solid var(--border);':''}">
             ${dRemittable?`<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||od.total_price||0)}" style="width:16px;height:16px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();updateBulkBar()">`:
-              `<span style="font-size:0.65rem;font-weight:800;color:var(--text3);width:16px;text-align:center;flex-shrink:0;">${i+1}</span>`}
-            <span style="font-size:0.8rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${od.products?.name||'--'}</span>
-            <span style="font-size:0.72rem;font-family:var(--mono);color:var(--green);flex-shrink:0;">&#8358;${parseFloat(od.total_price||0).toLocaleString()}</span>
-            <span style="font-size:0.6rem;font-weight:700;color:${dColor};flex-shrink:0;">${dRemitted?'Done':(statusLabels[d.status]||d.status)}</span>
-            ${dPending?`<button onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid rgba(99,179,237,0.3);background:var(--blue-dim);color:var(--blue2);cursor:pointer;white-space:nowrap;flex-shrink:0;">Update</button>`:''}
-            ${dAwaiting?`<button onclick="markPaymentReceived('${d.id}','${od.id||''}','${safeC}',${parseFloat(od.total_price||0)})" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--green);background:var(--green-dim);color:var(--green);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#128176; Paid</button>`:''}
-            ${(d.status==='delivered_payment_made'&&!dRemitted)?`<button onclick="revertDeliveredPaid('${d.id}')" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--amber);background:var(--amber-dim);color:var(--amber);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#8617; Undo</button>`:''}
+              `<span style="font-size:0.65rem;font-weight:700;color:var(--text3);width:16px;text-align:center;flex-shrink:0;">${i+1}</span>`}
+            <span style="font-size:0.82rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${od.products?.name||'—'}</span>
+            <span style="font-size:0.72rem;color:var(--text3);flex-shrink:0;">×${od.quantity||1}</span>
+            <span style="font-size:0.78rem;font-family:var(--mono);color:var(--green);flex-shrink:0;">&#8358;${parseFloat(od.total_price||0).toLocaleString()}</span>
+            <span style="font-size:0.62rem;font-weight:700;color:${dColor};flex-shrink:0;">${dRemitted?'Done':(statusLabels[d.status]||d.status)}</span>
+            ${dPending?`<button onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="font-size:0.62rem;font-weight:700;padding:4px 9px;border-radius:7px;border:1px solid rgba(99,179,237,0.3);background:var(--blue-dim);color:var(--blue2);cursor:pointer;white-space:nowrap;flex-shrink:0;">Update</button>`:''}
+            ${dAwaiting?`<button onclick="markPaymentReceived('${d.id}','${od.id||''}','${safeC}',${parseFloat(od.total_price||0)})" style="font-size:0.62rem;font-weight:700;padding:4px 9px;border-radius:7px;border:1px solid var(--green);background:var(--green-dim);color:var(--green);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#128176; Paid</button>`:''}
+            ${(d.status==='delivered_payment_made'&&!dRemitted)?`<button onclick="revertDeliveredPaid('${d.id}')" style="font-size:0.62rem;font-weight:700;padding:4px 9px;border-radius:7px;border:1px solid var(--amber);background:var(--amber-dim);color:var(--amber);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#8617; Undo</button>`:''}
           </div>`;
         }).join('')}
-      </div>` : '';
+      </div>`;
 
-    const singleCheck = !isBatch ? (() => {
-      const d = items[0]; const od = d.orders||{};
-      const isR = d.status==='delivered_payment_made'&&d.customer_paid===true&&!d.remitted_to_admin;
-      return isR ? `<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||od.total_price||0)}" style="width:18px;height:18px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();updateBulkBar()">` : '';
-    })() : '';
+    const singleCheck = (!isMulti && first.status==='delivered_payment_made'&&first.customer_paid===true&&!first.remitted_to_admin)
+      ? `<input type="checkbox" class="remit-check" data-id="${first.id}" data-amount="${parseFloat(first.amount_collected||o.total_price||0)}" style="width:18px;height:18px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();updateBulkBar()">` : '';
 
-    const safeFirst = (o.customer_name||'').replace(/'/g,"\\'");
-
-    return `<div class="delivery-card ${cardStatusClass}" id="dcard-${group.id}" style="margin-bottom:14px;">
-      ${batchHeader}
+    return `<div class="delivery-card ${cardClass}" style="margin-bottom:14px;">
+      ${isMulti ? `<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,0.12);border:1px solid rgba(99,179,237,0.25);border-radius:20px;padding:3px 10px;margin-bottom:10px;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <span style="font-size:0.65rem;font-weight:700;color:var(--blue3);">${groupItems.length} ITEMS &middot; GROUPED ORDER</span>
+      </div>` : ''}
       <div class="dc-top">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
           ${singleCheck}
           <div style="flex:1;min-width:0;">
-            <div class="dc-name">${o.customer_name||'--'}</div>
-            <div class="dc-product">${isBatch?items.length+' products ordered':o.products?.name||'--'}</div>
+            <div class="dc-name">${o.customer_name||'—'}</div>
+            <div class="dc-product">${isMulti ? groupItems.length+' products' : (o.products?.name||'—')}</div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
           <span class="badge ${allRemitted?'b-delivered':statusClasses[first.status]||'b-assigned'}">${allRemitted?'All Done':(statusLabels[first.status]||first.status)}</span>
-          ${!isBatch&&first.status==='delivered_payment_made'&&!first.remitted_to_admin?`<button onclick="revertDeliveredPaid('${first.id}')" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #F59E0B;background:rgba(245,158,11,0.1);color:#F59E0B;cursor:pointer;white-space:nowrap;">&#8617; Undo Paid</button>`:''}
+          ${isMulti?`<span style="font-size:0.75rem;font-weight:800;color:var(--green);font-family:var(--mono);">&#8358;${groupTotal.toLocaleString()} total</span>`:''}
         </div>
       </div>
-      ${itemRows}
-      <div class="dc-meta">
-        <div class="dc-meta-item"><div class="dc-meta-lbl">Location</div><div class="dc-meta-val">${o.delivery_location||'--'}</div></div>
-        <div class="dc-meta-item">
-          <div class="dc-meta-lbl">${isBatch?'Batch Total':'Amount'}</div>
-          <div class="dc-meta-val mono" style="color:var(--green);">&#8358;${(isBatch?batchTotal:parseFloat(first.orders?.total_price||0)).toLocaleString()}</div>
-        </div>
+      <div class="dc-meta" style="margin-bottom:10px;">
+        <div class="dc-meta-item"><div class="dc-meta-lbl">Location</div><div class="dc-meta-val">${o.delivery_location||'—'}</div></div>
+        <div class="dc-meta-item"><div class="dc-meta-lbl">${isMulti?'Batch Total':'Amount'}</div><div class="dc-meta-val mono" style="color:var(--green);">&#8358;${groupTotal.toLocaleString()}</div></div>
       </div>
-      ${!isBatch&&anyPending?`<button class="update-btn" onclick="openUpdateModal(${JSON.stringify(first).replace(/"/g,'&quot;')})">Update Status &#8594;</button>`:''}
-      ${!isBatch&&first.status==='delivered_awaiting_payment'?`
-        <button class="update-btn" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:8px;" onclick="markPaymentReceived('${first.id}','${first.orders?.id||''}','${safeFirst}',${parseFloat(o.total_price||0)})">
+      ${isMulti ? itemRows : ''}
+      ${isMulti ? markAllSection : ''}
+      ${!isMulti&&anyPending?`<button class="update-btn" onclick="openUpdateModal(${JSON.stringify(first).replace(/"/g,'&quot;')})">Update Status &#8594;</button>`:''}
+      ${!isMulti&&first.status==='delivered_awaiting_payment'?`
+        <button class="update-btn" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:8px;" onclick="markPaymentReceived('${first.id}','${first.orders?.id||''}','${(o.customer_name||'').replace(/'/g,"\\'")}',${parseFloat(o.total_price||0)})">
           &#128176; Mark Payment Received
         </button>`:''}
       ${phone&&anyPending?`<div style="display:flex;gap:8px;margin-top:10px;">
@@ -1885,6 +1890,16 @@ function renderDeliveries() {
 
   el.innerHTML = bulkBar + groups.map(buildGroupCard).join('');
   updateBulkBar();
+}
+
+// Mark all pending items in a group at once
+async function markAllInGroup(deliveryIds, action) {
+  if (!confirm(`Mark all ${deliveryIds.length} items as ${action === 'delivered_paid' ? 'Delivered & Paid' : 'Awaiting Payment'}?`)) return;
+  for (const id of deliveryIds) {
+    const d = allDeliveries.find(x => x.id === id);
+    if (!d || (d.status !== 'assigned' && d.status !== 'in_transit')) continue;
+    await executeUpdate(id, d.orders?.id, d.orders?.products?.id, d.orders?.quantity||1, action);
+  }
 }
 
 
