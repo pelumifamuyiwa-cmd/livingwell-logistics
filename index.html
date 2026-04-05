@@ -1657,17 +1657,16 @@ function updateStats() {
 }
 
 function groupByCustomer(deliveries) {
-  const groups = {};
-  const seenBatch = new Set();
+  // Group by batch_id first, fallback to customer+location key
+  const groupMap = {};
   deliveries.forEach(d => {
-    // Prefer batch_id grouping if available, fall back to customer+location
-    const key = d.batch_id || ((d.orders?.customer_name || 'unknown') + '|' + (d.orders?.delivery_location || ''));
-    if (d.batch_id && seenBatch.has(d.batch_id)) return;
-    if (d.batch_id) seenBatch.add(d.batch_id);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(d);
+    const key = d.batch_id
+      ? 'batch:' + d.batch_id
+      : 'cust:' + (d.orders?.customer_name||'unknown') + '|' + (d.orders?.delivery_location||'');
+    if (!groupMap[key]) groupMap[key] = [];
+    groupMap[key].push(d);
   });
-  return Object.values(groups);
+  return Object.values(groupMap);
 }
 
 function renderDashboard() {
@@ -1776,18 +1775,20 @@ function renderDeliveries() {
   const statusLabels = { assigned:'Pending', in_transit:'In Transit', delivered_payment_made:'Delivered & Paid', delivered_awaiting_payment:'Awaiting Pay', cancelled:'Cancelled', failed:'Cancelled' };
   const statusClasses = { assigned:'b-assigned', in_transit:'b-assigned', delivered_payment_made:'b-delivered', delivered_awaiting_payment:'b-awaiting', cancelled:'b-cancelled', failed:'b-cancelled' };
 
-  // ── Group by batch_id so same-customer multi-product orders appear as one tile ──
-  const groups = [];
-  const seenBatches = new Set();
+  // ── Group by batch_id or customer+location ──
+  const groupMap = {};
   list.forEach(d => {
-    if (d.batch_id && seenBatches.has(d.batch_id)) return;
-    if (d.batch_id) {
-      seenBatches.add(d.batch_id);
-      groups.push({ isBatch: true, id: d.batch_id, items: list.filter(x => x.batch_id === d.batch_id) });
-    } else {
-      groups.push({ isBatch: false, id: d.id, items: [d] });
-    }
+    const key = d.batch_id
+      ? 'batch:' + d.batch_id
+      : 'cust:' + (d.orders?.customer_name||'unknown') + '|' + (d.orders?.delivery_location||'');
+    if (!groupMap[key]) groupMap[key] = [];
+    groupMap[key].push(d);
   });
+  const groups = Object.entries(groupMap).map(([key, items]) => ({
+    isBatch: key.startsWith('batch:') || items.length > 1,
+    id: key.startsWith('batch:') ? key.replace('batch:','') : items[0].id,
+    items
+  }));
 
   const remittable = list.filter(d => d.status === 'delivered_payment_made' && d.customer_paid === true && !d.remitted_to_admin);
   const bulkBar = remittable.length > 0 ? `
@@ -1806,7 +1807,8 @@ function renderDeliveries() {
     const items = group.items;
     const first = items[0];
     const o = first.orders || {};
-    const isBatch = group.isBatch && items.length > 1;
+    const isMulti = items.length > 1;  // true for both batch and customer+location groups
+    const isBatch = isMulti;
     const phone = (o.customer_phone||'').replace(/[^0-9]/g,'').replace(/^0/,'234');
     const batchTotal = items.reduce((s,d) => s + parseFloat(d.orders?.total_price||0), 0);
     const anyPending = items.some(d => d.status==='assigned'||d.status==='in_transit');
@@ -1824,7 +1826,10 @@ function renderDeliveries() {
       </div>` : '';
 
     const itemRows = isBatch ? `
-      <div style="margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+      <div style="margin-bottom:14px;border-radius:16px;overflow:hidden;border:1px solid var(--border2);">
+        <div style="padding:9px 14px 8px;background:rgba(59,130,246,0.07);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:0.65rem;font-weight:800;color:var(--blue3);text-transform:uppercase;letter-spacing:0.8px;">&#128230; ${items.length} Products &middot; Batch Order</span>
+        </div>
         ${items.map((d,i) => {
           const od = d.orders||{};
           const dPending = d.status==='assigned'||d.status==='in_transit';
@@ -1832,18 +1837,36 @@ function renderDeliveries() {
           const dRemitted = d.remitted_to_admin===true;
           const dAwaiting = d.status==='delivered_awaiting_payment';
           const dColor = dRemitted?'var(--blue2)':d.status==='delivered_payment_made'?'var(--green)':dAwaiting?'var(--amber)':d.status==='cancelled'?'var(--red)':'var(--text2)';
+          const dLabel = dRemitted?'&#10003; Done':(statusLabels[d.status]||d.status);
           const safeC = (od.customer_name||'').replace(/'/g,"\\'");
-          return `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${i%2===0?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)'};${i<items.length-1?'border-bottom:1px solid var(--border);':''}">
-            ${dRemittable?`<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||od.total_price||0)}" style="width:16px;height:16px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();updateBulkBar()">`:
-              `<span style="font-size:0.65rem;font-weight:800;color:var(--text3);width:16px;text-align:center;flex-shrink:0;">${i+1}</span>`}
-            <span style="font-size:0.8rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${od.products?.name||'--'}</span>
-            <span style="font-size:0.72rem;font-family:var(--mono);color:var(--green);flex-shrink:0;">&#8358;${parseFloat(od.total_price||0).toLocaleString()}</span>
-            <span style="font-size:0.6rem;font-weight:700;color:${dColor};flex-shrink:0;">${dRemitted?'Done':(statusLabels[d.status]||d.status)}</span>
-            ${dPending?`<button onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid rgba(99,179,237,0.3);background:var(--blue-dim);color:var(--blue2);cursor:pointer;white-space:nowrap;flex-shrink:0;">Update</button>`:''}
-            ${dAwaiting?`<button onclick="markPaymentReceived('${d.id}','${od.id||''}','${safeC}',${parseFloat(od.total_price||0)})" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--green);background:var(--green-dim);color:var(--green);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#128176; Paid</button>`:''}
-            ${(d.status==='delivered_payment_made'&&!dRemitted)?`<button onclick="revertDeliveredPaid('${d.id}')" style="font-size:0.6rem;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--amber);background:var(--amber-dim);color:var(--amber);cursor:pointer;white-space:nowrap;flex-shrink:0;">&#8617; Undo</button>`:''}
+          return `<div style="padding:12px 14px;${i<items.length-1?'border-bottom:1px solid var(--border);':''}">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:${(dPending||dAwaiting||(d.status==='delivered_payment_made'&&!dRemitted))?'10px':'0'};">
+              <div style="width:26px;height:26px;border-radius:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(99,179,237,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span style="font-size:0.68rem;font-weight:800;color:var(--blue3);">${i+1}</span>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.86rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${od.products?.name||'--'}</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:3px;">
+                  <span style="font-size:0.74rem;font-family:var(--mono);color:var(--green);font-weight:700;">&#8358;${parseFloat(od.total_price||0).toLocaleString()}</span>
+                  <span style="font-size:0.62rem;font-weight:700;color:${dColor};">${dLabel}</span>
+                </div>
+              </div>
+              ${dRemittable?`<input type="checkbox" class="remit-check" data-id="${d.id}" data-amount="${parseFloat(d.amount_collected||od.total_price||0)}" style="width:18px;height:18px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();updateBulkBar()">`:
+                (dRemitted?`<div style="width:24px;height:24px;border-radius:50%;background:var(--green-dim);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>`:'')
+              }
+            </div>
+            ${dPending?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+              <button onclick="quickUpdate(${JSON.stringify(d).replace(/"/g,'&quot;')},'delivered_paid')" style="padding:9px 4px;border-radius:11px;border:1px solid rgba(16,185,129,0.25);background:var(--green-dim);color:var(--green);font-size:0.72rem;font-weight:700;cursor:pointer;font-family:var(--font);">&#10003; Delivered &amp; Paid</button>
+              <button onclick="openUpdateModal(${JSON.stringify(d).replace(/"/g,'&quot;')})" style="padding:9px 4px;border-radius:11px;border:1px solid rgba(99,179,237,0.25);background:var(--blue-dim);color:var(--blue2);font-size:0.72rem;font-weight:700;cursor:pointer;font-family:var(--font);">&#128203; More Options</button>
+            </div>`:''}
+            ${dAwaiting?`<button onclick="markPaymentReceived('${d.id}','${od.id||''}','${safeC}',${parseFloat(od.total_price||0)})" style="width:100%;padding:9px;border-radius:11px;border:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:0.74rem;font-weight:700;cursor:pointer;font-family:var(--font);">&#128176; Mark Payment Received</button>`:''}
+            ${(d.status==='delivered_payment_made'&&!dRemitted)?`<button onclick="revertDeliveredPaid('${d.id}')" style="width:100%;padding:7px;border-radius:11px;border:1px solid rgba(245,158,11,0.25);background:var(--amber-dim);color:var(--amber);font-size:0.7rem;font-weight:700;cursor:pointer;font-family:var(--font);">&#8617; Undo Paid</button>`:''}
           </div>`;
         }).join('')}
+        <div style="padding:11px 14px;background:rgba(16,185,129,0.06);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.74rem;font-weight:600;color:var(--text2);">Total to collect</span>
+          <span style="font-size:1rem;font-weight:800;color:var(--green);font-family:var(--mono);">&#8358;${batchTotal.toLocaleString()}</span>
+        </div>
       </div>` : '';
 
     const singleCheck = !isBatch ? (() => {
